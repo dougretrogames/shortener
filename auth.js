@@ -242,18 +242,31 @@ function renderAuthHeader() {
     }
   });
 
-  // 2. Controla a visibilidade do link 'Painel' no cabeçalho (apenas visível se logado)
-  const painelNavLinks = document.querySelectorAll("a[href*='painel'], li.nav-painel-item");
-  painelNavLinks.forEach(item => {
-    if (item.tagName.toLowerCase() === 'a') {
-      const parentLi = item.closest('li');
-      if (parentLi) {
-        parentLi.style.display = isAuth ? "" : "none";
-      } else {
-        item.style.display = isAuth ? "" : "none";
-      }
+  // 2. Controla o estado e o ícone de cadeado do link 'Painel' no cabeçalho
+  const painelNavLinks = document.querySelectorAll("a[href*='painel']");
+  painelNavLinks.forEach(link => {
+    const parentLi = link.closest('li');
+    if (parentLi) {
+      parentLi.style.display = ""; // Sempre visível tanto para visitante quanto para logado
+    }
+    link.style.display = "";
+
+    if (isAuth) {
+      link.classList.remove("nav-link-locked");
+      link.removeAttribute("title");
+      link.innerHTML = `Painel`;
     } else {
-      item.style.display = isAuth ? "" : "none";
+      link.classList.add("nav-link-locked");
+      link.setAttribute("title", "Painel (Acesso Restrito - Requer Login)");
+      link.innerHTML = `
+        <span class="nav-link-label">Painel</span>
+        <span class="nav-lock-badge" aria-label="Acesso Restrito">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </span>
+      `;
     }
   });
 }
