@@ -275,7 +275,7 @@ function copyLink(url) {
   });
 }
 
-// Abre a tela modal moderna de confirmação de exclusão no painel
+// Abre a tela modal moderna de confirmação de exclusão permanente no painel
 function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
   let modal = document.querySelector("#confirm-delete-modal");
   if (!modal) {
@@ -285,18 +285,22 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
     document.body.appendChild(modal);
   }
 
-  const title = customTitle || "Confirmar Exclusão";
+  const title = customTitle || "Confirmar Exclusão Permanente";
   const targetText = slug ? `/#/${slug}` : "Link selecionado";
-  const msg = customMsg || `Tem certeza de que deseja excluir este link do seu painel? Esta ação liberará o identificador para novos cadastros e não pode ser desfeita.`;
+  const msg = customMsg || `Atenção: Este link será <strong>excluído permanentemente</strong> do seu painel e <strong>não poderá ser recuperado</strong>. O identificador será liberado para novos cadastros.`;
 
   modal.innerHTML = `
-    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2rem 1.75rem;">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; color: #ef4444;">
+    <div class="modal-card" style="max-width: 450px; text-align: center; padding: 2rem 1.75rem;">
+      <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem auto; color: #ef4444;">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
           <line x1="12" y1="9" x2="12" y2="13"></line>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
+      </div>
+
+      <div style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: var(--radius-full); background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+        ⚠️ Ação Permanente e Irreversível
       </div>
 
       <h2 style="font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem;">${escapeHtml(title)}</h2>
@@ -305,20 +309,20 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
         ${escapeHtml(targetText)}
       </div>
 
-      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
-        ${escapeHtml(msg)}
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.55;">
+        ${msg}
       </p>
 
       <div style="display: flex; gap: 0.75rem; justify-content: center;">
         <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()" style="flex: 1; padding: 0.75rem 1rem;">
           Cancelar
         </button>
-        <button type="button" id="confirm-delete-action-btn" class="btn btn-danger" style="flex: 1; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+        <button type="button" id="confirm-delete-action-btn" class="btn btn-danger" style="flex: 1.2; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
           </svg>
-          <span>Confirmar Exclusão</span>
+          <span>Excluir Permanentemente</span>
         </button>
       </div>
     </div>
