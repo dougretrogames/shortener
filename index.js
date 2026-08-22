@@ -149,7 +149,15 @@ async function main() {
       try {
         const urlObj = new URL(targetUrl);
         if (urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:") {
-          // Registra clique no tracker
+          // Registra clique no Supabase
+          const finalSlug = customSlug || (rawHash ? rawHash.split("@")[0] : "");
+          if (window.supabaseDb && finalSlug) {
+            try {
+              await window.supabaseDb.incrementClicks(finalSlug);
+            } catch (e) {}
+          }
+
+          // Registra clique no tracker local
           if (window.clickTracker) {
             window.clickTracker.recordClick(customSlug || rawHash);
           }
@@ -251,7 +259,17 @@ async function main() {
           return;
         }
 
-        // Registra o clique para estatísticas na Dashboard
+        // Registra o clique no Supabase em tempo real
+        const finalSlug = customSlug || (rawHash ? rawHash.split("@")[0] : "");
+        if (window.supabaseDb && finalSlug) {
+          try {
+            await window.supabaseDb.incrementClicks(finalSlug);
+          } catch (e) {
+            console.warn("[Supabase] Erro ao incrementar cliques:", e);
+          }
+        }
+
+        // Registra o clique para estatísticas na Dashboard local
         if (window.clickTracker) {
           window.clickTracker.recordClick(customSlug || rawHash);
         }

@@ -31,7 +31,7 @@ function updateSessionInfo() {
   }
 }
 
-function loadDashboardData() {
+async function loadDashboardData() {
   try {
     const raw = localStorage.getItem("linklock_saved_custom_links");
     allLinks = raw ? JSON.parse(raw) : [];
@@ -49,6 +49,31 @@ function loadDashboardData() {
 
   renderStats();
   filterLinks();
+
+  // Sincroniza contadores de cliques em tempo real direto do Supabase Nuvem
+  if (window.supabaseDb && allLinks.length > 0) {
+    try {
+      let changed = false;
+      for (const link of allLinks) {
+        if (link.slug) {
+          const remote = await window.supabaseDb.getLink(link.slug);
+          if (remote && remote.clicks !== undefined) {
+            const remoteClicks = Number(remote.clicks) || 0;
+            if (remoteClicks !== link.clicks) {
+              link.clicks = Math.max(remoteClicks, link.clicks || 0);
+              changed = true;
+            }
+          }
+        }
+      }
+      if (changed) {
+        renderStats();
+        filterLinks();
+      }
+    } catch (e) {
+      console.warn("[Supabase] Erro ao sincronizar cliques com o painel:", e);
+    }
+  }
 }
 
 function renderStats() {
