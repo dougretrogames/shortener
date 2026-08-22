@@ -84,6 +84,17 @@ async function onDecrypt() {
   // Se for um link sem senha (direto)
   if (params["open"] || params["u"] || (!("e" in params) && params["u"])) {
     const targetUrl = params["u"];
+    try {
+      const parsed = new URL(targetUrl);
+      if (!(parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "magnet:")) {
+        showStatus(`O link possui o protocolo não permitido "${parsed.protocol}". Por segurança, apenas links http://, https:// e magnet: são aceitos.`, true);
+        return;
+      }
+    } catch {
+      showStatus("A URL de destino é inválida ou malformatada.", true);
+      return;
+    }
+
     const resultOutput = document.querySelector("#result-output");
     const resultSection = document.querySelector("#result-section");
     const openLinkBtn = document.querySelector("#open-decrypted");
@@ -123,6 +134,18 @@ async function onDecrypt() {
     decrypted = await api.decrypt(encrypted, password, salt, iv);
   } catch {
     showStatus("Senha incorreta ou dados corrompidos. Tente novamente.", true);
+    return;
+  }
+
+  // Validação segura do link descriptografado
+  try {
+    const parsed = new URL(decrypted);
+    if (!(parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "magnet:")) {
+      showStatus(`O link descriptografado utiliza o protocolo "${parsed.protocol}", que não é permitido por segurança.`, true);
+      return;
+    }
+  } catch {
+    showStatus("A URL descriptografada é inválida ou não pôde ser interpretada como um endereço web seguro.", true);
     return;
   }
 

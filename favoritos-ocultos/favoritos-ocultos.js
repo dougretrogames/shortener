@@ -43,6 +43,10 @@ async function onHide() {
   let hiddenUrl;
   try {
     hiddenUrl = new URL(urlText);
+    if (!(hiddenUrl.protocol === "http:" || hiddenUrl.protocol === "https:")) {
+      showStatus("A URL protegida inserida deve utilizar o protocolo 'http://' ou 'https://'.", true);
+      return;
+    }
   } catch {
     showStatus("A URL protegida inserida não é válida. Certifique-se de incluir 'https://'!", true);
     return;
@@ -52,6 +56,10 @@ async function onHide() {
   let bookmarkUrl;
   try {
     bookmarkUrl = new URL(bookmarkUrlText);
+    if (!(bookmarkUrl.protocol === "http:" || bookmarkUrl.protocol === "https:")) {
+      showStatus("A URL de disfarce inserida deve utilizar o protocolo 'http://' ou 'https://'.", true);
+      return;
+    }
   } catch {
     showStatus("A URL de disfarce inserida não é válida. Certifique-se de incluir 'https://'!", true);
     return;
