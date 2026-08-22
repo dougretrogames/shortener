@@ -28,6 +28,12 @@
     }
 
     function main() {
+      if (typeof window !== "undefined") {
+        if ("scrollRestoration" in history) {
+          history.scrollRestoration = "manual";
+        }
+        window.scrollTo(0, 0);
+      }
       if (!("b64" in window)) {
         error("Biblioteca Base64 não foi carregada.");
         return;
@@ -171,7 +177,6 @@
           placeholder="https://exemplo.com/pagina-secreta ou exemplo.com" 
           autocomplete="off"
           required 
-          autofocus
         />
       </div>
 
