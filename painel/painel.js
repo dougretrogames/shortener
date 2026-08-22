@@ -270,8 +270,42 @@ function openEditModal(slug) {
   document.querySelector("#edit-target-url").value = link.targetUrl || "";
   document.querySelector("#edit-hint").value = link.hint || "";
 
+  const passwordInput = document.querySelector("#edit-password");
+  const confirmPasswordInput = document.querySelector("#edit-password-confirm");
+  const removePasswordCheckbox = document.querySelector("#edit-remove-password");
+  const removePasswordGroup = document.querySelector("#edit-remove-password-group");
+  const securityBadge = document.querySelector("#edit-security-badge");
+
+  if (passwordInput) {
+    passwordInput.value = "";
+    passwordInput.disabled = false;
+  }
+  if (confirmPasswordInput) {
+    confirmPasswordInput.value = "";
+    confirmPasswordInput.disabled = false;
+  }
+
+  const isEncrypted = !!(link.encryptedData && link.encryptedData.e);
+  if (isEncrypted) {
+    if (securityBadge) {
+      securityBadge.className = "badge badge-warning";
+      securityBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Protegido por Senha`;
+    }
+    if (removePasswordGroup) removePasswordGroup.style.display = "flex";
+    if (removePasswordCheckbox) removePasswordCheckbox.checked = false;
+    if (passwordInput) passwordInput.placeholder = "Deixe em branco para manter a senha atual";
+  } else {
+    if (securityBadge) {
+      securityBadge.className = "badge badge-info";
+      securityBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Link Aberto (Sem Senha)`;
+    }
+    if (removePasswordGroup) removePasswordGroup.style.display = "none";
+    if (removePasswordCheckbox) removePasswordCheckbox.checked = false;
+    if (passwordInput) passwordInput.placeholder = "Digite uma senha para proteger este link...";
+  }
+
   const statusEl = document.querySelector("#edit-slug-status");
-  statusEl.style.display = "none";
+  if (statusEl) statusEl.style.display = "none";
 
   document.querySelector("#edit-modal").style.display = "flex";
 }
@@ -280,15 +314,51 @@ function closeEditModal() {
   document.querySelector("#edit-modal").style.display = "none";
 }
 
-function checkEditSlugAvailability() {
-  const originalSlug = document.querySelector("#edit-original-slug").value.trim();
-  const newSlug = document.querySelector("#edit-slug").value.trim().toLowerCase();
-  const statusEl = document.querySelector("#edit-slug-status");
+function toggleRemovePasswordState() {
+  const removePasswordCheckbox = document.querySelector("#edit-remove-password");
+  const passwordInput = document.querySelector("#edit-password");
+  const confirmPasswordInput = document.querySelector("#edit-password-confirm");
 
-  if (!newSlug || newSlug === originalSlug.toLowerCase()) {
+  if (!removePasswordCheckbox || !passwordInput || !confirmPasswordInput) return;
+
+  if (removePasswordCheckbox.checked) {
+    passwordInput.value = "";
+    confirmPasswordInput.value = "";
+    passwordInput.disabled = true;
+    confirmPasswordInput.disabled = true;
+  } else {
+    passwordInput.disabled = false;
+    confirmPasswordInput.disabled = false;
+  }
+}
+
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+  } else {
+    input.type = 'password';
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+  }
+}
+
+async function checkEditSlugAvailability() {
+  const originalSlug = document.querySelector("#edit-original-slug").value.trim();
+  const rawVal = document.querySelector("#edit-slug").value.trim();
+  const statusEl = document.querySelector("#edit-slug-status");
+  if (!statusEl) return;
+
+  if (!rawVal || rawVal.toLowerCase() === originalSlug.toLowerCase()) {
     statusEl.style.display = "none";
     return;
   }
+
+  const newSlug = rawVal
+    .replace(/[\s_]+/g, "-")
+    .replace(/[@#?&/\\:]+/g, "")
+    .toLowerCase();
 
   // 1. Verificação de profanidade / termos vulgares
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
@@ -298,32 +368,66 @@ function checkEditSlugAvailability() {
     return;
   }
 
-  const exists = allLinks.some(l => l.slug && l.slug.toLowerCase() === newSlug && l.slug.toLowerCase() !== originalSlug.toLowerCase());
+  // 2. Consulta no cache local de links carregados
+  const existsLocal = allLinks.some(l => l.slug && l.slug.toLowerCase() === newSlug && l.slug.toLowerCase() !== originalSlug.toLowerCase());
+
+  // 3. Consulta global em tempo real no Supabase
+  let existsRemote = false;
+  if (window.supabaseDb) {
+    try {
+      existsRemote = await window.supabaseDb.exists(newSlug);
+    } catch {}
+  }
 
   statusEl.style.display = "flex";
-  if (exists) {
+  if (existsLocal || existsRemote) {
     statusEl.className = "slug-status exists";
-    statusEl.innerHTML = `⚠️ O apelido "${escapeHtml(newSlug)}" já está em uso por outro link.`;
+    statusEl.innerHTML = `⚠️ O apelido "<strong>${escapeHtml(newSlug)}</strong>" já está em uso por outro link cadastrado.`;
   } else {
     statusEl.className = "slug-status available";
-    statusEl.innerHTML = `✓ Apelido disponível!`;
+    statusEl.innerHTML = `✓ Apelido "<strong>${escapeHtml(newSlug)}</strong>" disponível para uso!`;
   }
 }
 
 async function saveEditedLink(e) {
   e.preventDefault();
-  const originalSlug = document.querySelector("#edit-original-slug").value;
-  const newSlug = document.querySelector("#edit-slug").value.trim().toLowerCase();
+  const originalSlug = document.querySelector("#edit-original-slug").value.trim();
+  const rawSlug = document.querySelector("#edit-slug").value.trim();
   const newTargetUrl = document.querySelector("#edit-target-url").value.trim();
   const newHint = document.querySelector("#edit-hint").value.trim();
+  const newPassword = document.querySelector("#edit-password") ? document.querySelector("#edit-password").value : "";
+  const confirmPassword = document.querySelector("#edit-password-confirm") ? document.querySelector("#edit-password-confirm").value : "";
+  const removePassword = document.querySelector("#edit-remove-password") ? document.querySelector("#edit-remove-password").checked : false;
+  const saveBtn = document.querySelector("#save-edit-btn");
 
-  // Validação de profanidade
+  const newSlug = rawSlug
+    .replace(/[\s_]+/g, "-")
+    .replace(/[@#?&/\\:]+/g, "")
+    .toLowerCase();
+
+  if (!newSlug) {
+    alert("Por favor, informe um apelido válido para o link.");
+    return;
+  }
+
+  // 1. Validação de profanidade
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
     alert("O apelido personalizado contém termos impróprios ou palavras de baixo calão não permitidas.");
     return;
   }
 
-  // Validação de segurança da URL
+  // 2. Validação de disponibilidade caso o apelido tenha mudado
+  if (newSlug !== originalSlug.toLowerCase()) {
+    if (window.supabaseDb) {
+      const exists = await window.supabaseDb.exists(newSlug);
+      if (exists) {
+        alert(`O apelido "/${newSlug}" já está em uso por outro link no sistema. Escolha outro nome.`);
+        return;
+      }
+    }
+  }
+
+  // 3. Validação de segurança da URL
   try {
     const parsed = new URL(newTargetUrl);
     if (!(parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "magnet:")) {
@@ -335,48 +439,129 @@ async function saveEditedLink(e) {
     return;
   }
 
+  // 4. Validação de confirmação de senha
+  if (newPassword && newPassword !== confirmPassword) {
+    alert("As senhas digitadas não coincidem. Verifique e tente novamente.");
+    const confirmInput = document.querySelector("#edit-password-confirm");
+    if (confirmInput) confirmInput.focus();
+    return;
+  }
+
   const link = allLinks.find(l => (l.slug || "").toLowerCase() === originalSlug.toLowerCase());
   if (!link) return;
 
-  if (window.supabaseDb) {
-    try {
-      const enc = (link.encryptedData && typeof link.encryptedData === "object") ? link.encryptedData : {};
-      enc.t = newTargetUrl;
-      enc.u = newTargetUrl;
-      enc.h = newHint;
-
-      if (newSlug !== originalSlug.toLowerCase()) {
-        // Se mudou o apelido, recria com o novo slug no Supabase e remove o antigo
-        await window.supabaseDb.deleteLink(originalSlug);
-        await window.supabaseDb.saveLink({
-          slug: newSlug,
-          encryptedData: enc,
-          hint: newHint,
-          targetUrl: newTargetUrl,
-          authorType: link.authorType,
-          authorUsername: link.authorUsername,
-          authorName: link.authorName
-        });
-      } else {
-        // Atualiza os dados no banco Supabase
-        const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(originalSlug)}`;
-        await fetch(endpoint, {
-          method: "PATCH",
-          headers: window.supabaseDb.getHeaders(),
-          body: JSON.stringify({
-            encrypted_data: enc,
-            hint: newHint || null
-          })
-        });
-      }
-    } catch (err) {
-      console.error("[Supabase] Erro ao editar link no banco:", err);
-    }
+  const originalBtnHtml = saveBtn ? saveBtn.innerHTML : "";
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = `
+      <div style="display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <span>Salvando no banco de dados...</span>
+    `;
   }
 
-  closeEditModal();
-  showToast("Link atualizado no banco de dados com sucesso!");
-  await loadDashboardData();
+  try {
+    let enc = null;
+
+    // Cenário A: Usuário definiu uma NOVA SENHA (ou alterou a existente)
+    if (newPassword) {
+      const api = apiVersions['0.0.1'];
+      const salt = await api.randomSalt();
+      const iv = await api.randomIv();
+      const encryptedBuffer = await api.encrypt(newTargetUrl, newPassword, salt, iv);
+
+      enc = {
+        v: "0.0.1",
+        e: b64.binaryToBase64(new Uint8Array(encryptedBuffer)),
+        s: b64.binaryToBase64(salt),
+        i: b64.binaryToBase64(iv)
+      };
+      if (newHint) enc.h = newHint;
+    }
+    // Cenário B: Usuário marcou para REMOVER A SENHA
+    else if (removePassword) {
+      enc = {
+        v: "0.0.1",
+        open: true,
+        u: newTargetUrl
+      };
+      if (newHint) enc.h = newHint;
+    }
+    // Cenário C: Campos de senha em branco e não marcou para remover senha (manter proteção atual)
+    else {
+      const hadPassword = !!(link.encryptedData && link.encryptedData.e);
+      if (hadPassword) {
+        // Se a URL de destino mudou mas não foi digitada nova senha, exige a senha para recriptografar com segurança
+        if (link.targetUrl && newTargetUrl !== link.targetUrl) {
+          alert("Para alterar a URL de destino de um link protegido por senha, digite a nova senha (ou redigite a atual) para que a nova URL seja criptografada com segurança.");
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnHtml;
+          }
+          const pwdInput = document.querySelector("#edit-password");
+          if (pwdInput) pwdInput.focus();
+          return;
+        }
+
+        enc = typeof link.encryptedData === "object" ? { ...link.encryptedData } : {};
+        if (newHint) enc.h = newHint;
+        else delete enc.h;
+      } else {
+        // Link aberto
+        enc = {
+          v: "0.0.1",
+          open: true,
+          u: newTargetUrl
+        };
+        if (newHint) enc.h = newHint;
+      }
+    }
+
+    // Preserva metadados de autoria do criador
+    if (link.authorType) enc.author_type = link.authorType;
+    if (link.authorUsername) enc.author_username = link.authorUsername;
+    if (link.authorName) enc.author_name = link.authorName;
+
+    // Atualiza no banco de dados Supabase
+    if (window.supabaseDb) {
+      await window.supabaseDb.updateLink(originalSlug, {
+        newSlug: newSlug,
+        encryptedData: enc,
+        hint: newHint,
+        targetUrl: newTargetUrl
+      });
+    }
+
+    // Atualiza também no localStorage local se estiver registrado
+    try {
+      const localRaw = localStorage.getItem("linklock_saved_custom_links");
+      if (localRaw) {
+        const localList = JSON.parse(localRaw);
+        const idx = localList.findIndex(l => l.slug && l.slug.toLowerCase() === originalSlug.toLowerCase());
+        if (idx !== -1) {
+          const baseUrl = new URL('../', window.location.href).href;
+          const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+          
+          localList[idx].slug = newSlug;
+          localList[idx].targetUrl = newTargetUrl;
+          localList[idx].hint = newHint;
+          localList[idx].encryptedData = enc;
+          localList[idx].outputUrl = `${cleanBaseUrl}${encodeURIComponent(newSlug)}`;
+          localStorage.setItem("linklock_saved_custom_links", JSON.stringify(localList));
+        }
+      }
+    } catch {}
+
+    closeEditModal();
+    showToast("Link e credenciais atualizados no banco de dados com sucesso!");
+    await loadDashboardData();
+  } catch (err) {
+    console.error("[Painel] Erro ao salvar edição do link:", err);
+    alert("Erro ao salvar alterações no banco de dados. Tente novamente.");
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalBtnHtml;
+    }
+  }
 }
 
 // Ações de Links

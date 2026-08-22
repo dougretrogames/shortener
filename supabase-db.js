@@ -320,6 +320,69 @@ const supabaseDb = {
     }
   },
 
+  // Atualiza um link existente no Supabase (incluindo eventual alteração de slug ou dados criptografados)
+  async updateLink(originalSlug, { newSlug, encryptedData, hint, targetUrl }) {
+    if (!originalSlug || !encryptedData) return false;
+    const cleanOrig = String(originalSlug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanNew = String(newSlug || originalSlug).trim().toLowerCase().replace(/^[/#]+/, '');
+
+    try {
+      const existing = await this.getLink(cleanOrig);
+      if (!existing) return false;
+
+      // Preserva informações do autor existente caso não venham em encryptedData
+      if (typeof encryptedData === "object" && encryptedData !== null) {
+        if (!encryptedData.author_type && existing.author_type) encryptedData.author_type = existing.author_type;
+        if (!encryptedData.author_username && existing.encrypted_data && existing.encrypted_data.author_username) {
+          encryptedData.author_username = existing.encrypted_data.author_username;
+        }
+        if (!encryptedData.author_name && existing.author_name) encryptedData.author_name = existing.author_name;
+      }
+
+      // Se mudou o slug, remove o antigo e insere o novo mantendo contagem de cliques, autoria e data de criação
+      if (cleanNew !== cleanOrig) {
+        await this.deleteLink(cleanOrig);
+        const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
+        const payload = {
+          slug: cleanNew,
+          encrypted_data: encryptedData,
+          hint: hint || null,
+          clicks: existing.clicks || 0,
+          created_at: existing.created_at || new Date().toISOString(),
+          author_type: existing.author_type || "github",
+          author_name: existing.author_name || "GitHub"
+        };
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            ...this.getHeaders(),
+            "Prefer": "resolution=merge-duplicates"
+          },
+          body: JSON.stringify(payload)
+        });
+        return res.ok || res.status === 201;
+      } else {
+        // Se o slug é o mesmo, atualiza diretamente via PATCH
+        const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanOrig)}`;
+        const res = await fetch(endpoint, {
+          method: "PATCH",
+          headers: {
+            ...this.getHeaders(),
+            "Prefer": "return=representation"
+          },
+          body: JSON.stringify({
+            encrypted_data: encryptedData,
+            hint: hint || null
+          })
+        });
+        return res.ok;
+      }
+    } catch (e) {
+      console.error(`[Supabase] Falha ao atualizar link /${cleanOrig}:`, e);
+      return false;
+    }
+  },
+
   // Exclui um link no Supabase
   async deleteLink(slug) {
     if (!slug) return false;
