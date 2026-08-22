@@ -7,14 +7,11 @@
 const AUTH_USER_KEY = "encurtador_auth_user";
 const OAUTH_CONFIG_KEY = "encurtador_oauth_client_config";
 
-// Configurações padrão de Client IDs (Podem ser personalizadas no modal de configurações)
+// Configurações padrão de Client IDs
 const DEFAULT_OAUTH_CONFIG = {
-  // Google OAuth 2.0 (Implicit Token Flow)
-  googleClientId: "1034456789012-encurtadordelinks.apps.googleusercontent.com",
-  // GitHub OAuth App Client ID
-  githubClientId: "Iv1.encurtadordelinks",
-  // Microsoft / Azure AD App Client ID
-  microsoftClientId: "9f8e7d6c-5b4a-3f2e-1d0c-encurtadorapp"
+  googleClientId: "",
+  githubClientId: "",
+  microsoftClientId: ""
 };
 
 class AuthManager {
@@ -80,6 +77,19 @@ class AuthManager {
     localStorage.setItem(OAUTH_CONFIG_KEY, JSON.stringify(this.config));
   }
 
+  isProviderConfigured(provider) {
+    if (provider === "google") {
+      return Boolean(this.config.googleClientId && this.config.googleClientId.trim() !== "");
+    }
+    if (provider === "github") {
+      return Boolean(this.config.githubClientId && this.config.githubClientId.trim() !== "");
+    }
+    if (provider === "microsoft") {
+      return Boolean(this.config.microsoftClientId && this.config.microsoftClientId.trim() !== "");
+    }
+    return false;
+  }
+
   // Obtém a URL de redirecionamento limpa para o OAuth
   getRedirectUri() {
     return window.location.origin + window.location.pathname;
@@ -90,22 +100,31 @@ class AuthManager {
   // =========================================================================
 
   redirectToGoogle() {
+    if (!this.isProviderConfigured("google")) {
+      openOAuthSetupModal("google");
+      return;
+    }
+
     const redirectUri = this.getRedirectUri();
-    const clientId = this.config.googleClientId;
+    const clientId = this.config.googleClientId.trim();
     const scope = encodeURIComponent("openid profile email");
     const state = encodeURIComponent(JSON.stringify({ provider: "google", from: window.location.pathname }));
     
     // URL oficial de autorização do Google OAuth 2.0
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&state=${state}&prompt=select_account`;
     
-    // Salva o provedor que iniciou a requisição
     sessionStorage.setItem("pending_oauth_provider", "google");
     window.location.href = googleAuthUrl;
   }
 
   redirectToGitHub() {
+    if (!this.isProviderConfigured("github")) {
+      openOAuthSetupModal("github");
+      return;
+    }
+
     const redirectUri = this.getRedirectUri();
-    const clientId = this.config.githubClientId;
+    const clientId = this.config.githubClientId.trim();
     const scope = encodeURIComponent("read:user user:email");
     const state = encodeURIComponent(JSON.stringify({ provider: "github", from: window.location.pathname }));
 
@@ -117,8 +136,13 @@ class AuthManager {
   }
 
   redirectToMicrosoft() {
+    if (!this.isProviderConfigured("microsoft")) {
+      openOAuthSetupModal("microsoft");
+      return;
+    }
+
     const redirectUri = this.getRedirectUri();
-    const clientId = this.config.microsoftClientId;
+    const clientId = this.config.microsoftClientId.trim();
     const scope = encodeURIComponent("openid profile email User.Read");
     const state = encodeURIComponent(JSON.stringify({ provider: "microsoft", from: window.location.pathname }));
 
@@ -260,7 +284,7 @@ class AuthManager {
 window.authManager = new AuthManager();
 
 // =========================================================================
-// Interface do Usuário: Cabeçalho & Modal
+// Interface do Usuário: Cabeçalho & Modais
 // =========================================================================
 
 function renderAuthHeader() {
@@ -310,7 +334,7 @@ function openLoginModal() {
           <button class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
         </div>
         <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1.25rem; line-height: 1.5;">
-          Selecione o provedor para ser encaminhado diretamente à página oficial de autorização:
+          Selecione o provedor para autorizar o acesso diretamente na página oficial:
         </p>
 
         <div class="social-login-group">
@@ -365,7 +389,6 @@ function closeLoginModal() {
   if (modal) modal.style.display = "none";
 }
 
-// Inicia o redirecionamento para o site do provedor
 function initiateDirectOAuth(provider) {
   if (provider === "google") {
     window.authManager.redirectToGoogle();
@@ -376,7 +399,103 @@ function initiateDirectOAuth(provider) {
   }
 }
 
-// Modal de Configuração de Chaves OAuth (Para personalização de App IDs)
+// Modal de Ajuda & Configuração Rápida de Client ID
+function openOAuthSetupModal(provider) {
+  closeLoginModal();
+  let modal = document.querySelector("#oauth-setup-modal");
+
+  const providerInfo = {
+    google: {
+      name: "Google",
+      portal: "https://console.cloud.google.com/apis/credentials",
+      portalName: "Google Cloud Console",
+      docStep: "1. Crie um 'ID do cliente OAuth' (Aplicativo da Web)\n2. Origem JavaScript autorizada: <code>" + window.location.origin + "</code>\n3. URI de redirecionamento autorizada: <code>" + window.location.origin + window.location.pathname + "</code>",
+      placeholder: "Ex: 123456789-abc.apps.googleusercontent.com",
+      configField: "googleClientId"
+    },
+    github: {
+      name: "GitHub",
+      portal: "https://github.com/settings/developers",
+      portalName: "GitHub Developer Settings (OAuth Apps)",
+      docStep: "1. Clique em 'New OAuth App'\n2. Homepage URL: <code>" + window.location.origin + "</code>\n3. Authorization callback URL: <code>" + window.location.origin + window.location.pathname + "</code>",
+      placeholder: "Ex: Iv1.1234567890abcdef",
+      configField: "githubClientId"
+    },
+    microsoft: {
+      name: "Microsoft / Outlook",
+      portal: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+      portalName: "Azure Portal (App Registrations)",
+      docStep: "1. Registre um novo aplicativo para 'Contas Microsoft pessoais e corporativas'\n2. Plataforma: Single-page application (SPA)\n3. Redirect URI: <code>" + window.location.origin + window.location.pathname + "</code>",
+      placeholder: "Ex: 00000000-0000-0000-0000-000000000000",
+      configField: "microsoftClientId"
+    }
+  }[provider];
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "oauth-setup-modal";
+    modal.className = "modal-backdrop";
+  }
+
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>Configurar Client ID do ${providerInfo.name}</h2>
+        <button class="modal-close-btn" onclick="closeOAuthSetupModal()">&times;</button>
+      </div>
+      
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.85rem; line-height: 1.5;">
+        Para que o <strong>${providerInfo.name}</strong> autorize o login diretamente no seu domínio (<code>${window.location.origin}</code>), você precisa informar o <strong>Client ID</strong> do seu aplicativo:
+      </p>
+
+      <div class="info-card" style="padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.84rem; background: rgba(0,0,0,0.3);">
+        <p style="margin-bottom: 0.4rem; color: #7dd3fc; font-weight: 600;">Como obter seu Client ID gratuito em 2 minutos:</p>
+        <div style="color: var(--text-secondary); white-space: pre-line; line-height: 1.5; font-size: 0.82rem;">
+          ${providerInfo.docStep}
+        </div>
+        <div style="margin-top: 0.6rem;">
+          <a href="${providerInfo.portal}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; display: inline-flex;">
+            Abrir ${providerInfo.portalName} ↗
+          </a>
+        </div>
+      </div>
+
+      <form onsubmit="saveProviderKey(event, '${provider}', '${providerInfo.configField}')">
+        <div class="form-group labeled-input">
+          <label for="setup-client-id">Cole aqui o Client ID gerado:</label>
+          <input type="text" id="setup-client-id" placeholder="${providerInfo.placeholder}" required autofocus />
+        </div>
+
+        <div class="btn-group" style="margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary btn-block">Salvar e Conectar com ${providerInfo.name}</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.style.display = "flex";
+}
+
+function closeOAuthSetupModal() {
+  const modal = document.querySelector("#oauth-setup-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function saveProviderKey(e, provider, configField) {
+  e.preventDefault();
+  const val = document.querySelector("#setup-client-id").value.trim();
+  if (!val) return;
+
+  const update = {};
+  update[configField] = val;
+  window.authManager.saveOAuthConfig(update);
+
+  closeOAuthSetupModal();
+  // Redireciona imediatamente com a nova chave válida
+  initiateDirectOAuth(provider);
+}
+
+// Modal Geral de Configurações de Chaves
 function openOAuthSettingsModal() {
   closeLoginModal();
   let modal = document.querySelector("#oauth-settings-modal");
@@ -386,40 +505,41 @@ function openOAuthSettingsModal() {
     modal = document.createElement("div");
     modal.id = "oauth-settings-modal";
     modal.className = "modal-backdrop";
-    modal.innerHTML = `
-      <div class="modal-card" style="max-width: 520px;">
-        <div class="modal-header">
-          <h2>Configurar Chaves OAuth (Apps)</h2>
-          <button class="modal-close-btn" onclick="closeOAuthSettingsModal()">&times;</button>
-        </div>
-        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-          Insira os Client IDs dos seus aplicativos registrados para autorização direta no domínio <code>${window.location.origin}</code>:
-        </p>
-
-        <form onsubmit="saveCustomOAuthKeys(event)">
-          <div class="form-group labeled-input">
-            <label for="cfg-google-id">Google Client ID</label>
-            <input type="text" id="cfg-google-id" value="${escapeHtml(config.googleClientId)}" placeholder="xxxx.apps.googleusercontent.com" />
-          </div>
-
-          <div class="form-group labeled-input">
-            <label for="cfg-github-id">GitHub Client ID</label>
-            <input type="text" id="cfg-github-id" value="${escapeHtml(config.githubClientId)}" placeholder="Iv1.xxxx" />
-          </div>
-
-          <div class="form-group labeled-input">
-            <label for="cfg-ms-id">Microsoft / Azure Application (client) ID</label>
-            <input type="text" id="cfg-ms-id" value="${escapeHtml(config.microsoftClientId)}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-          </div>
-
-          <div class="btn-group" style="margin-top: 1.25rem;">
-            <button type="submit" class="btn btn-primary btn-block">Salvar Chaves</button>
-          </div>
-        </form>
-      </div>
-    `;
-    document.body.appendChild(modal);
   }
+
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h2>Chaves de Aplicativos OAuth</h2>
+        <button class="modal-close-btn" onclick="closeOAuthSettingsModal()">&times;</button>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 1rem;">
+        Cadastre os Client IDs dos seus aplicativos autorizados para o domínio <code>${window.location.origin}</code>:
+      </p>
+
+      <form onsubmit="saveAllOAuthKeys(event)">
+        <div class="form-group labeled-input">
+          <label for="cfg-google-id">Google Client ID</label>
+          <input type="text" id="cfg-google-id" value="${escapeHtml(config.googleClientId || '')}" placeholder="xxxx.apps.googleusercontent.com" />
+        </div>
+
+        <div class="form-group labeled-input">
+          <label for="cfg-github-id">GitHub Client ID</label>
+          <input type="text" id="cfg-github-id" value="${escapeHtml(config.githubClientId || '')}" placeholder="Iv1.xxxx" />
+        </div>
+
+        <div class="form-group labeled-input">
+          <label for="cfg-ms-id">Microsoft / Azure Application (client) ID</label>
+          <input type="text" id="cfg-ms-id" value="${escapeHtml(config.microsoftClientId || '')}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+        </div>
+
+        <div class="btn-group" style="margin-top: 1.25rem;">
+          <button type="submit" class="btn btn-primary btn-block">Salvar Chaves</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
   modal.style.display = "flex";
 }
 
@@ -428,20 +548,20 @@ function closeOAuthSettingsModal() {
   if (modal) modal.style.display = "none";
 }
 
-function saveCustomOAuthKeys(e) {
+function saveAllOAuthKeys(e) {
   e.preventDefault();
   const googleId = document.querySelector("#cfg-google-id").value.trim();
   const githubId = document.querySelector("#cfg-github-id").value.trim();
   const msId = document.querySelector("#cfg-ms-id").value.trim();
 
   window.authManager.saveOAuthConfig({
-    googleClientId: googleId || DEFAULT_OAUTH_CONFIG.googleClientId,
-    githubClientId: githubId || DEFAULT_OAUTH_CONFIG.githubClientId,
-    microsoftClientId: msId || DEFAULT_OAUTH_CONFIG.microsoftClientId
+    googleClientId: googleId,
+    githubClientId: githubId,
+    microsoftClientId: msId
   });
 
   closeOAuthSettingsModal();
-  alert("Configurações OAuth salvas com sucesso!");
+  alert("Chaves OAuth salvas com sucesso!");
 }
 
 function getRelativePathTo(target) {
