@@ -35,15 +35,21 @@ function saveToHistory(linkItem) {
   }
 }
 
-// Remove um link do histórico
+// Remove um link do histórico e libera o apelido
 function deleteHistoryItem(slug) {
-  if (!confirm(`Deseja realmente remover o link com apelido "${slug}" do seu histórico local?`)) {
+  if (!confirm(`Deseja realmente remover o link com apelido "${slug}" do seu histórico?`)) {
     return;
   }
   try {
     let links = getSavedLinks();
-    links = links.filter(l => l.slug !== slug);
+    links = links.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
     localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
+    
+    // Limpa do cache em memória para liberar o apelido imediatamente
+    if (globalDbCache && slug) {
+      delete globalDbCache[slug.toLowerCase()];
+    }
+
     renderHistory();
     checkSlugAvailability();
   } catch (e) {
@@ -51,13 +57,14 @@ function deleteHistoryItem(slug) {
   }
 }
 
-// Limpa todo o histórico de links salvos
+// Limpa todo o histórico de links salvos e libera todos os apelidos
 function clearAllHistory() {
-  if (!confirm("Tem certeza de que deseja limpar todos os links salvos do seu histórico local?")) {
+  if (!confirm("Tem certeza de que deseja limpar todos os links salvos do seu histórico?")) {
     return;
   }
   try {
     localStorage.removeItem(CRIAR_STORAGE_KEY);
+    globalDbCache = {};
     renderHistory();
     checkSlugAvailability();
   } catch (e) {
