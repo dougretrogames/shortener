@@ -255,24 +255,7 @@ function normalizeSlug(str) {
     .toLowerCase();
 }
 
-// Cache global do banco de dados para verificação de unicidade mundial
-let globalDbCache = null;
-
-async function getGlobalDatabase() {
-  if (globalDbCache) return globalDbCache;
-  try {
-    const res = await fetch('../db.json?t=' + Date.now(), { cache: 'no-store' });
-    if (res.ok) {
-      globalDbCache = await res.json();
-      return globalDbCache;
-    }
-  } catch (e) {
-    console.warn("db.json remoto não pôde ser consultado:", e);
-  }
-  return {};
-}
-
-// Obtém o conjunto de TODOS os links existentes (Supabase Nuvem + db.json + LocalStorage)
+// Obtém o conjunto de TODOS os links existentes (Supabase Nuvem + LocalStorage)
 async function getAllExistingSlugs() {
   const slugSet = new Set();
 
@@ -297,15 +280,7 @@ async function getAllExistingSlugs() {
     }
   }
 
-  // 2. Banco do repositório db.json
-  const db = await getGlobalDatabase();
-  if (db && typeof db === "object") {
-    Object.keys(db).forEach(k => {
-      if (k) slugSet.add(k.toLowerCase());
-    });
-  }
-
-  // 3. LocalStorage
+  // 2. LocalStorage
   const localLinks = getSavedLinks();
   localLinks.forEach(l => {
     if (l.slug) slugSet.add(l.slug.toLowerCase());
@@ -692,27 +667,6 @@ async function copyDirectText(text) {
   }
 }
 
-// Exporta todos os links salvos com apelido como arquivo db.json
-function exportDbJson() {
-  const links = getSavedLinks();
-  const dbObj = {};
-  links.forEach(item => {
-    if (item.slug && item.encryptedData) {
-      dbObj[item.slug.toLowerCase()] = item.encryptedData;
-    }
-  });
-
-  const jsonStr = JSON.stringify(dbObj, null, 2);
-  const blob = new Blob([jsonStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "db.json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
 
 // Aviso de segurança ao tentar desativar o IV aleatório
 function onIvCheck(checkbox) {

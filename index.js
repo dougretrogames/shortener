@@ -75,7 +75,7 @@ async function main() {
       } catch {}
     }
 
-    // Caso 3: Apelido curto limpo (ex: #retrogamebox-vip ou #6x8qt) - busca no Supabase, db.json e localStorage
+    // Caso 3: Apelido curto limpo (ex: #retrogamebox-vip ou #6x8qt) - busca no Supabase Nuvem e localStorage
     if (!params) {
       customSlug = decodeURIComponent(rawHash).trim();
       const slugKey = customSlug.toLowerCase();
@@ -93,21 +93,7 @@ async function main() {
         }
       }
 
-      // Busca no banco de dados db.json do repositório
-      if (!entry) {
-        let db = {};
-        try {
-          const dbRes = await fetch('./db.json?t=' + Date.now(), { cache: 'no-store' });
-          if (dbRes.ok) {
-            db = await dbRes.json();
-          }
-        } catch (e) {
-          console.warn("db.json não pôde ser carregado:", e);
-        }
-        entry = db[slugKey] || db[customSlug];
-      }
-
-      // Se não encontrou no db.json, procura no histórico local (localStorage)
+      // Se não encontrou no Supabase, procura no histórico local (localStorage)
       if (!entry) {
         try {
           const localRaw = localStorage.getItem("linklock_saved_custom_links");

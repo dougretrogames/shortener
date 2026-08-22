@@ -2,7 +2,7 @@
 
 > **Proteja e encurte URLs com senha usando criptografia AES-256 de padrão militar diretamente no navegador.**
 
-Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos limpos (`/#/apelido` ou `/#/5digitos`)**, **banco de dados seguro (`db.json`)**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
+Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos limpos (`/#/apelido` ou `/#/5digitos`)**, **banco de dados em nuvem Supabase em tempo real**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
 
 [👉 Acesse o Repositório no GitHub](https://github.com/dougretrogames/encurtador) | [🚀 Teste a Aplicação Online](https://dougretrogames.github.io/encurtador/criar/)
 
@@ -27,14 +27,14 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
   - **Sem Repetição Interna:** Os 5 dígitos sorteados são estritamente distintos entre si.
   - **Legibilidade Total:** As letras `I` maiúsculo e `l` minúsculo foram excluídas para evitar qualquer ambiguidade visual com `1` ou `l`.
 
-### 4. 🗄️ Banco de Dados Criptografado (`db.json`)
-- Os links personalizados e curtos são armazenados no arquivo `db.json` na raiz do repositório.
-- **Segurança Máxima:** O `db.json` armazena apenas o *ciphertext* cifrado em AES-256 com Salt e IV. Mesmo que o repositório seja público ou clonado por terceiros, é matematicamente impossível descobrir a URL de destino sem a senha.
-- **Botão Exportar db.json:** Atualize facilmente a base do repositório direto pela interface.
+### 4. ⚡ Banco de Dados em Nuvem em Tempo Real (Supabase)
+- Todos os links criados por **qualquer visitante no mundo** são salvos instantaneamente (tempo de resposta de ~50ms) no Supabase.
+- **Segurança Máxima:** O banco de dados armazena apenas o *ciphertext* cifrado em AES-256 com Salt e IV. É matematicamente impossível descobrir a URL de destino sem a senha correta.
+- **Zero Dependência de Commits:** Não requer commits manuais no repositório; os links ficam disponíveis mundialmente no exato momento do clique.
 
 ### 5. 🌐 Validação Global de Unicidade em Tempo Real
 - Impede colisões de links entre todos os usuários:
-  - Consulta o banco global `db.json` e o armazenamento local.
+  - Consulta o banco em nuvem Supabase e o armazenamento local.
   - Alerta imediatamente se um apelido já estiver em uso: `❌ O apelido "..." já está em uso por outro link cadastrado.`
   - Garante que códigos automáticos de 5 dígitos sejam sempre 100% inéditos no mundo.
 
@@ -73,7 +73,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 
 ### 2. Desbloqueando um Link
 1. Acesse o link encurtado.
-2. A página carregará os parâmetros seguros via `db.json` ou URL.
+2. A página carregará os parâmetros seguros via Supabase.
 3. Digite a senha correta e clique em **"Desbloquear Link"** (ou pressione `Enter`).
 4. O navegador descriptografará o destino localmente e redirecionará com segurança!
 
@@ -121,8 +121,8 @@ Acesse `http://localhost:8000` no seu navegador.
 | **Salt Criptográfico** | 16 bytes (128 bits) gerados aleatoriamente |
 | **Formato de Rota** | Hash routing SPA (`/#/apelido` e `/#/5digitos`) |
 | **Gerador Aleatório** | 5 dígitos únicos sem repetição (pool de 60 chars sem `I` e `l`) |
-| **Banco de Dados** | `db.json` com armazenamento criptografado no repositório |
-| **Validação de Unicidade** | Verificação dupla em tempo real (`db.json` global + `localStorage`) |
+| **Banco de Dados** | Supabase Cloud Database (REST API em tempo real) |
+| **Validação de Unicidade** | Verificação em tempo real no Supabase + Cache Local |
 | **Compatibilidade** | Chrome, Edge, Firefox, Safari, Opera, iOS Safari, Android Chrome |
 
 ---
