@@ -389,6 +389,18 @@ input[type="text"].has-toggle {
   padding-right: 3rem;
 }
 
+/* Oculta os botões nativos redundantes de revelar senha em navegadores (Edge, IE, WebKit) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-contacts-auto-fill-button {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 input[type="text"]:focus,
 input[type="url"]:focus,
 input[type="password"]:focus,
