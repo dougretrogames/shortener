@@ -156,8 +156,44 @@ function normalizeSlug(str) {
     .toLowerCase();
 }
 
-// Verifica disponibilidade de apelido personalizado em tempo real
-function checkSlugAvailability() {
+// Cache global do banco de dados para verificação de unicidade mundial
+let globalDbCache = null;
+
+async function getGlobalDatabase() {
+  if (globalDbCache) return globalDbCache;
+  try {
+    const res = await fetch('../db.json?t=' + Date.now(), { cache: 'no-store' });
+    if (res.ok) {
+      globalDbCache = await res.json();
+      return globalDbCache;
+    }
+  } catch (e) {
+    console.warn("db.json remoto não pôde ser consultado:", e);
+  }
+  return {};
+}
+
+// Obtém o conjunto de TODOS os links existentes (Banco global db.json de todos os usuários + LocalStorage)
+async function getAllExistingSlugs() {
+  const db = await getGlobalDatabase();
+  const localLinks = getSavedLinks();
+  const slugSet = new Set();
+
+  if (db && typeof db === "object") {
+    Object.keys(db).forEach(k => {
+      if (k) slugSet.add(k.toLowerCase());
+    });
+  }
+
+  localLinks.forEach(l => {
+    if (l.slug) slugSet.add(l.slug.toLowerCase());
+  });
+
+  return slugSet;
+}
+
+// Verifica disponibilidade de apelido personalizado em tempo real (consulta global)
+async function checkSlugAvailability() {
   const slugInput = document.querySelector("#custom-slug");
   const statusEl = document.querySelector("#slug-status");
   if (!slugInput || !statusEl) return;
@@ -170,21 +206,21 @@ function checkSlugAvailability() {
   }
 
   const cleanSlug = normalizeSlug(rawVal);
-  const links = getSavedLinks();
-  const existing = links.find(l => l.slug && l.slug.toLowerCase() === cleanSlug);
+  const existingSlugs = await getAllExistingSlugs();
+  const isTaken = existingSlugs.has(cleanSlug.toLowerCase());
 
   statusEl.style.display = "flex";
-  if (existing) {
+  if (isTaken) {
     statusEl.className = "slug-status exists";
     statusEl.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-      <span>Aviso: O apelido <strong>"${escapeHtml(cleanSlug)}"</strong> já foi criado anteriormente (${formatDate(existing.createdAt)}). Salvar novamente irá atualizá-lo.</span>
+      <span>O apelido <strong>"${escapeHtml(cleanSlug)}"</strong> já está em uso por outro link cadastrado. Escolha outro nome.</span>
     `;
   } else {
     statusEl.className = "slug-status available";
     statusEl.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-      <span>Apelido <strong>"${escapeHtml(cleanSlug)}"</strong> disponível!</span>
+      <span>Apelido <strong>"${escapeHtml(cleanSlug)}"</strong> disponível para uso!</span>
     `;
   }
 }
@@ -196,12 +232,12 @@ function checkSlugAvailability() {
 // Total = 60 caracteres possíveis
 const SAFE_SLUG_CHARS = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
 
-// Gera um identificador aleatório único de 5 dígitos sem repetição de caracteres dentro do código
-function generateUniqueSlug() {
-  const existingLinks = getSavedLinks();
-  const existingSlugs = new Set(existingLinks.map(l => (l.slug || "").toLowerCase()));
+// Gera um identificador aleatório único de 5 dígitos sem repetição de caracteres dentro do código,
+// e que NUNCA tenha sido utilizado por NENHUM usuário no sistema (db.json global ou local).
+async function generateUniqueSlug() {
+  const existingSlugs = await getAllExistingSlugs();
 
-  for (let attempt = 0; attempt < 1000; attempt++) {
+  for (let attempt = 0; attempt < 5000; attempt++) {
     const chars = SAFE_SLUG_CHARS.split("");
     let slug = "";
 
@@ -219,7 +255,7 @@ function generateUniqueSlug() {
       chars.splice(idx, 1); // Garante que nenhum caractere se repita dentro do mesmo código
     }
 
-    // Garante que o slug gerado é único no histórico
+    // Garante que o slug gerado é 100% inédito em todos os links já criados
     if (!existingSlugs.has(slug.toLowerCase())) {
       return slug;
     }
@@ -357,10 +393,23 @@ async function onEncrypt() {
     const rawSlug = document.querySelector("#custom-slug") ? document.querySelector("#custom-slug").value.trim() : "";
     let customSlug = normalizeSlug(rawSlug);
 
-    // Se o usuário não digitou um apelido personalizado, gera automaticamente um código único de 5 dígitos
-    // (A-Z sem 'I', a-z sem 'l', 0-9, sem caracteres repetidos no mesmo código)
-    if (!customSlug) {
-      customSlug = generateUniqueSlug();
+    const existingSlugs = await getAllExistingSlugs();
+
+    // Se o usuário digitou um apelido, garante que ele não existe no sistema global/local
+    if (customSlug) {
+      if (existingSlugs.has(customSlug.toLowerCase())) {
+        alert(`O apelido "/#/${customSlug}" já está em uso por outro link no sistema. Por favor, escolha um nome diferente.`);
+        const slugInput = document.querySelector("#custom-slug");
+        if (slugInput) slugInput.focus();
+        if (encryptBtn) {
+          encryptBtn.disabled = false;
+          encryptBtn.innerHTML = originalBtnHtml;
+        }
+        return;
+      }
+    } else {
+      // Se não digitou, gera automaticamente o código único de 5 dígitos sem repetição
+      customSlug = await generateUniqueSlug();
     }
 
     const encrypted = await generateFragment(url, passwordInput ? passwordInput.value : "", hint, useRandomSalt, useRandomIv);
