@@ -54,19 +54,13 @@ function extractTargetFromLocation() {
   return "";
 }
 
-// Executado quando o <body> é carregado
+// Executado quando o documento/corpo é carregado
 async function main() {
   const rawTarget = extractTargetFromLocation();
 
   if (rawTarget) {
     const formEl = document.querySelector(".form");
-    if (formEl) formEl.style.display = "block";
-    
     const pwdInput = document.querySelector("#password");
-    if (pwdInput) {
-      pwdInput.value = "";
-      pwdInput.focus();
-    }
     
     const errorEl = document.querySelector(".error");
     if (errorEl) errorEl.style.display = "none";
@@ -108,7 +102,7 @@ async function main() {
       } catch {}
     }
 
-    // Caso 3: Apelido curto limpo (ex: retrogamebox-vip ou 6x8qt) - busca no Supabase Nuvem e localStorage
+    // Caso 3: Apelido curto limpo (ex: retrobox ou 6x8qt) - busca no Supabase Nuvem e localStorage
     if (!params) {
       customSlug = decodeURIComponent(rawTarget).trim();
       const slugKey = customSlug.toLowerCase();
@@ -176,7 +170,23 @@ async function main() {
       }
     }
 
-    // Exibe o badge de link personalizado se houver
+    // Suporte a links diretos encurtados sem senha (redirecionamento IMEDIATO e transparente)
+    if (params["open"] || params["u"] || (!("e" in params) && params["u"])) {
+      const targetUrl = params["u"];
+      try {
+        const urlObj = new URL(targetUrl);
+        if (urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:") {
+          // Redireciona instantaneamente sem exibir formulário ou qualquer tela intermediária
+          window.location.replace(targetUrl);
+          return;
+        }
+      } catch (e) {
+        error("A URL de destino é inválida.");
+        return;
+      }
+    }
+
+    // Exibe o badge de link personalizado se houver (para links com senha)
     const slugContainer = document.querySelector("#custom-slug-container");
     const slugText = document.querySelector("#custom-slug-text");
     if (customSlug && slugContainer && slugText) {
@@ -186,30 +196,11 @@ async function main() {
       slugContainer.style.display = "none";
     }
 
-    // Suporte a links diretos encurtados sem senha
-    if (params["open"] || params["u"] || (!("e" in params) && params["u"])) {
-      const targetUrl = params["u"];
-      try {
-        const urlObj = new URL(targetUrl);
-        if (urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:") {
-          // Exibe status visual de redirecionamento imediato
-          if (formEl) {
-            formEl.innerHTML = `
-              <div style="text-align: center; padding: 2rem 1rem;">
-                <div style="display: inline-block; width: 44px; height: 44px; border: 3px solid rgba(56,189,248,0.2); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1rem;"></div>
-                <h3 style="margin-bottom: 0.5rem; font-size: 1.15rem;">Redirecionando...</h3>
-                <p style="color: var(--text-muted); font-size: 0.88rem;">Você será encaminhado para o destino em instantes.</p>
-              </div>
-            `;
-            formEl.style.display = "block";
-          }
-          window.location.href = targetUrl;
-          return;
-        }
-      } catch (e) {
-        error("A URL de destino é inválida.");
-        return;
-      }
+    // Apenas para links protegidos por senha: exibe o formulário de desbloqueio
+    if (formEl) formEl.style.display = "block";
+    if (pwdInput) {
+      pwdInput.value = "";
+      pwdInput.focus();
     }
 
     // Verifica se os parâmetros essenciais estão presentes para links criptografados
