@@ -77,6 +77,56 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 
 ---
 
+## 📥 Instalação e Execução Local (Git Clone)
+
+Como a aplicação é 100% estática (HTML, CSS e JavaScript puros), você não precisa instalar nenhuma dependência pesada para rodá-la localmente.
+
+### Passo a passo:
+
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/dougretrogames/encurtador.git
+   ```
+
+2. **Acesse a pasta do projeto:**
+   ```bash
+   cd encurtador
+   ```
+
+3. **Abra a aplicação:**
+   - **Opção 1 (Direto no Navegador):** Dê um duplo clique no arquivo `index.html` ou abra-o em qualquer navegador.
+   - **Opção 2 (Com Servidor Local - Recomendado para testar APIs do navegador):**
+     - Com **Python 3**:
+       ```bash
+       python -m http.server 8000
+       ```
+     - Com **Node.js**:
+       ```bash
+       npx serve .
+       ```
+     - Com **VS Code**: Utilize a extensão *Live Server*.
+   - Acesse `http://localhost:8000` no seu navegador.
+
+---
+
+## 🌐 Como Habilitar o GitHub Pages (Publicação Gratuita)
+
+Você pode hospedar o seu **Encurtador de Links** gratuitamente utilizando o **GitHub Pages**. Siga os passos abaixo:
+
+1. Acesse o seu repositório no GitHub:  
+   👉 `https://github.com/dougretrogames/encurtador`
+2. Clique na aba **Settings** (Configurações) no menu superior do repositório.
+3. No menu lateral esquerdo, clique na opção **Pages** (dentro da seção *Code and automation*).
+4. Na seção **Build and deployment**:
+   - Em **Source**, selecione a opção **Deploy from a branch**.
+   - Em **Branch**, selecione o ramo **`master`** (ou `main`) e a pasta **`/(root)`**.
+5. Clique no botão **Save**.
+6. Aguarde cerca de 1 a 2 minutos para que o GitHub conclua a publicação.
+7. Recarregue a página de configurações do GitHub Pages e seu link público estará ativo no topo, no formato:  
+   👉 **`https://dougretrogames.github.io/encurtador/`**
+
+---
+
 ## 🔐 Especificações Técnicas e Algoritmos
 
 | Recurso | Detalhes da Implementação |
