@@ -10,12 +10,39 @@ const SUPABASE_CONFIG = {
 };
 
 const supabaseDb = {
+  config: SUPABASE_CONFIG,
+
   getHeaders() {
     return {
       "apikey": SUPABASE_CONFIG.key,
       "Authorization": `Bearer ${SUPABASE_CONFIG.key}`,
       "Content-Type": "application/json"
     };
+  },
+
+  // Retorna a URL para redirecionamento oficial de OAuth do provedor
+  getOAuthUrl(provider = "github", redirectTo = "") {
+    const cleanRedirect = redirectTo || (typeof window !== "undefined" ? window.location.href.split('#')[0] : "");
+    return `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(cleanRedirect)}`;
+  },
+
+  // Obtém dados do usuário a partir do token de acesso OAuth retornado pelo Supabase
+  async getUserFromToken(accessToken) {
+    if (!accessToken) return null;
+    try {
+      const res = await fetch(`${SUPABASE_CONFIG.url}/auth/v1/user`, {
+        headers: {
+          "apikey": SUPABASE_CONFIG.key,
+          "Authorization": `Bearer ${accessToken}`
+        }
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.error("[Supabase] Erro ao buscar usuário pelo token:", e);
+    }
+    return null;
   },
 
   // Busca um link pelo slug no Supabase

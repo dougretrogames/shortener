@@ -232,7 +232,7 @@ function renderAuthHeader() {
       `;
     } else {
       container.innerHTML = `
-        <button type="button" class="btn btn-github btn-sm auth-login-btn" onclick="openLoginModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.75rem; min-height: 36px;">
+        <button type="button" class="btn btn-github btn-sm auth-login-btn" onclick="loginWithGitHubOAuth()" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.75rem; min-height: 36px;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
           </svg>
@@ -271,7 +271,16 @@ function handleAuthLogout() {
   }
 }
 
-// Modal Seguro de Login com GitHub (solicita o usuário explicitamente)
+// Redireciona diretamente para o fluxo oficial de autorização OAuth do GitHub
+function loginWithGitHubOAuth() {
+  const currentUrl = window.location.href.split('#')[0];
+  const authUrl = window.supabaseDb 
+    ? window.supabaseDb.getOAuthUrl("github", currentUrl)
+    : `https://nmqzjcriwggemfawpjqc.supabase.co/auth/v1/authorize?provider=github&redirect_to=${encodeURIComponent(currentUrl)}`;
+  window.location.href = authUrl;
+}
+
+// Modal Simplificado de Login com GitHub (apenas botão de autorização, sem campos de texto)
 function openLoginModal() {
   let modal = document.querySelector("#auth-modal");
   if (!modal) {
@@ -282,60 +291,34 @@ function openLoginModal() {
   }
 
   modal.innerHTML = `
-    <div class="modal-card" style="max-width: 420px; text-align: center; padding: 2rem 1.75rem; position: relative;">
+    <div class="modal-card" style="max-width: 420px; text-align: center; padding: 2.25rem 1.75rem; position: relative;">
       <div class="modal-header" style="justify-content: flex-end; border-bottom: none; padding: 0; margin-bottom: 0.25rem;">
         <button class="modal-close-btn" onclick="closeLoginModal()" aria-label="Fechar modal">&times;</button>
       </div>
 
       <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-        <div style="width: 60px; height: 60px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; border: 1px solid #e2e8f0; color: #181717; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
+        <div style="width: 68px; height: 68px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; border: 1px solid #e2e8f0; color: #181717; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
+          <svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
           </svg>
         </div>
 
-        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.35rem; font-weight: 700; color: #fff;">Entrar com GitHub</h2>
-        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 1.5rem; line-height: 1.55;">
-          Digite seu nome de usuário do GitHub para sincronizar seus links personalizados e gerenciar estatísticas no Painel.
+        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.4rem; font-weight: 700; color: #fff;">Entrar com GitHub</h2>
+        <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1.75rem; line-height: 1.55;">
+          Você será direcionado para o GitHub para autorizar o acesso à sua conta e sincronizar seus links personalizados no Painel.
         </p>
 
-        <form id="gh-login-form" onsubmit="handleLoginSubmit(event)" style="width: 100%; text-align: left;">
-          <div class="form-group labeled-input" style="margin-bottom: 1rem;">
-            <label for="gh-username-input" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-              Nome de Usuário no GitHub
-            </label>
-            <div class="slug-input-group" style="margin-top: 0.35rem;">
-              <span class="slug-prefix" style="color: var(--text-muted);">@</span>
-              <input 
-                type="text" 
-                id="gh-username-input" 
-                placeholder="seu-usuario" 
-                autocomplete="username" 
-                required 
-                autofocus
-                style="padding-left: 0.5rem;"
-              />
-            </div>
-          </div>
-
-          <div id="gh-login-error" style="display: none; background: var(--danger-bg); border: 1px solid var(--danger-border); color: #f87171; border-radius: var(--radius-md); padding: 0.65rem 0.85rem; font-size: 0.82rem; margin-bottom: 1rem; line-height: 1.45;"></div>
-
-          <button type="submit" id="gh-submit-btn" class="btn btn-github btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.8rem 1.25rem; font-size: 0.95rem; font-weight: 600;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-            </svg>
-            <span>Entrar com GitHub</span>
-          </button>
-        </form>
+        <button type="button" id="gh-oauth-btn" class="btn btn-github btn-block" onclick="loginWithGitHubOAuth()" style="display: flex; align-items: center; justify-content: center; gap: 0.65rem; padding: 0.85rem 1.25rem; font-size: 1rem; font-weight: 600;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>Entrar com GitHub</span>
+        </button>
       </div>
     </div>
   `;
 
   modal.style.display = "flex";
-  setTimeout(() => {
-    const input = document.querySelector("#gh-username-input");
-    if (input) input.focus();
-  }, 100);
 }
 
 function closeLoginModal() {
@@ -343,61 +326,59 @@ function closeLoginModal() {
   if (modal) modal.style.display = "none";
 }
 
-async function handleLoginSubmit(event) {
-  event.preventDefault();
-  const input = document.querySelector("#gh-username-input");
-  const errorEl = document.querySelector("#gh-login-error");
-  const submitBtn = document.querySelector("#gh-submit-btn");
+// Processa o retorno da autorização OAuth do GitHub (Implicit Grant no hash ou PKCE)
+async function handleOAuthCallback() {
+  const hash = window.location.hash;
 
-  if (!input) return;
-  const username = input.value.trim();
+  if (hash && hash.includes("access_token=")) {
+    const hashParams = new URLSearchParams(hash.substring(1));
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
 
-  if (errorEl) errorEl.style.display = "none";
+    if (accessToken && window.supabaseDb) {
+      try {
+        const data = await window.supabaseDb.getUserFromToken(accessToken);
 
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `
-      <div style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-      <span>Verificando perfil...</span>
-    `;
-  }
+        if (data && (data.id || data.user_metadata || data.email)) {
+          const meta = data.user_metadata || {};
+          const identities = data.identities || [];
+          const idData = (identities[0] && identities[0].identity_data) || {};
 
-  const result = await window.authManager.loginWithGitHub(username);
+          const username = meta.user_name || meta.preferred_username || idData.user_name || idData.login || (data.email ? data.email.split('@')[0] : "usuario");
+          const name = meta.full_name || meta.name || idData.name || username;
+          const avatar = meta.avatar_url || idData.avatar_url || `https://avatars.githubusercontent.com/${username}`;
 
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-      </svg>
-      <span>Entrar com GitHub</span>
-    `;
-  }
+          const userData = {
+            id: data.id || ("github_" + username),
+            username: username,
+            name: name,
+            email: data.email || `${username}@github.com`,
+            avatar: avatar,
+            provider: "github",
+            providerName: "GitHub",
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            createdAt: new Date().toISOString()
+          };
 
-  if (!result.success) {
-    if (errorEl) {
-      errorEl.innerText = result.error || "Não foi possível conectar com este usuário.";
-      errorEl.style.display = "block";
-    }
-    return;
-  }
+          window.authManager.saveUser(userData);
+          await migrateVisitorLinksToAccount(userData);
 
-  closeLoginModal();
-  renderAuthHeader();
+          // Limpa os parâmetros de autenticação da URL mantendo o endereço limpo
+          const cleanUrl = window.location.pathname + window.location.search;
+          window.history.replaceState(null, document.title, cleanUrl);
 
-  // Se estiver na página do painel, recarrega os dados do painel imediatamente
-  if (window.location.pathname.includes("/painel")) {
-    if (typeof initDashboard === "function") {
-      initDashboard();
-    } else {
-      window.location.reload();
-    }
-  }
-
-  // Se estiver na página de criação, atualiza a visibilidade do campo de slug
-  if (window.location.pathname.includes("/criar")) {
-    if (typeof updateAuthSlugState === "function") {
-      updateAuthSlugState();
+          renderAuthHeader();
+          if (window.location.pathname.includes("/painel") && typeof initDashboard === "function") {
+            initDashboard();
+          }
+          if (window.location.pathname.includes("/criar") && typeof updateAuthSlugState === "function") {
+            updateAuthSlugState();
+          }
+        }
+      } catch (err) {
+        console.error("[OAuth] Erro ao autenticar callback do GitHub:", err);
+      }
     }
   }
 }
@@ -460,8 +441,13 @@ function escapeHtml(str) {
 }
 
 // Inicialização imediata e no carregamento do DOM
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", renderAuthHeader);
-} else {
+async function initAuth() {
+  await handleOAuthCallback();
   renderAuthHeader();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAuth);
+} else {
+  initAuth();
 }
