@@ -217,11 +217,12 @@ function renderAuthHeader() {
   const authContainers = document.querySelectorAll("#auth-header-slot, .auth-slot");
   authContainers.forEach(container => {
     if (isAuth && user) {
-      const displayName = user.username ? `@${user.username}` : user.name;
+      const displayName = user.username ? `@${user.username}` : (user.name || "GitHub");
+      const avatarSrc = user.avatar || `https://avatars.githubusercontent.com/${user.username || 'github'}`;
       container.innerHTML = `
         <div class="user-profile-menu">
-          <a href="${getRelativePathTo('painel')}" class="user-avatar-btn" title="Acessar Painel (@${escapeHtml(user.username || user.name)})">
-            <img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(displayName)}" class="user-avatar-img" />
+          <a href="${getRelativePathTo('painel')}" class="user-avatar-btn" title="Acessar Painel (${escapeHtml(displayName)})">
+            <img src="${escapeHtml(avatarSrc)}" alt="${escapeHtml(displayName)}" class="user-avatar-img" />
             <span class="user-name-label">${escapeHtml(displayName)}</span>
           </a>
           <button type="button" class="user-logout-btn" onclick="handleAuthLogout()" title="Sair da conta">
@@ -242,10 +243,10 @@ function renderAuthHeader() {
     }
   });
 
-  // 2. Controla o estado e o ícone de cadeado do link 'Painel' EXCLUSIVAMENTE na barra de navegação
-  const painelNavLinks = document.querySelectorAll(".nav-links a[href*='painel'], li.nav-painel-item a");
+  // 2. Controla o estado e o ícone de cadeado do link 'Painel' EXCLUSIVAMENTE na barra de navegação (.nav-links)
+  const painelNavLinks = document.querySelectorAll(".nav-links li.nav-painel-item a, .nav-links a.nav-link[href*='painel']");
   painelNavLinks.forEach(link => {
-    if (link.classList.contains("user-avatar-btn")) return;
+    if (link.classList.contains("user-avatar-btn") || link.closest("#auth-header-slot") || link.closest(".auth-slot")) return;
     const parentLi = link.closest('li');
     if (parentLi) {
       parentLi.style.display = ""; // Sempre visível tanto para visitante quanto para logado
