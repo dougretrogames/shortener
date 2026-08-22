@@ -90,9 +90,13 @@ class AuthManager {
     return false;
   }
 
-  // Obtém a URL de redirecionamento limpa para o OAuth
+  // Obtém a URL de redirecionamento padronizada para o OAuth
   getRedirectUri() {
-    return window.location.origin + window.location.pathname;
+    const origin = window.location.origin;
+    if (window.location.pathname.includes("/encurtador")) {
+      return origin + "/encurtador/";
+    }
+    return origin + "/";
   }
 
   // =========================================================================
@@ -167,7 +171,6 @@ class AuthManager {
     const searchParams = new URLSearchParams(search);
 
     const accessToken = hashParams.get("access_token");
-    const idToken = hashParams.get("id_token");
     const code = searchParams.get("code");
     const stateRaw = hashParams.get("state") || searchParams.get("state");
 
@@ -404,12 +407,14 @@ function openOAuthSetupModal(provider) {
   closeLoginModal();
   let modal = document.querySelector("#oauth-setup-modal");
 
+  const exactRedirectUri = window.authManager.getRedirectUri();
+
   const providerInfo = {
     google: {
       name: "Google",
       portal: "https://console.cloud.google.com/apis/credentials",
       portalName: "Google Cloud Console",
-      docStep: "1. Crie um 'ID do cliente OAuth' (Aplicativo da Web)\n2. Origem JavaScript autorizada: <code>" + window.location.origin + "</code>\n3. URI de redirecionamento autorizada: <code>" + window.location.origin + window.location.pathname + "</code>",
+      docStep: `1. Crie um 'ID do cliente OAuth' (Aplicativo da Web)\n2. Origem JavaScript autorizada: <code>${window.location.origin}</code>\n3. URI de redirecionamento autorizada: <code>${exactRedirectUri}</code>`,
       placeholder: "Ex: 123456789-abc.apps.googleusercontent.com",
       configField: "googleClientId"
     },
@@ -417,7 +422,7 @@ function openOAuthSetupModal(provider) {
       name: "GitHub",
       portal: "https://github.com/settings/applications/new",
       portalName: "GitHub - Registrar Novo OAuth App",
-      docStep: "1. Preencha o nome do aplicativo (ex: Encurtador)\n2. Homepage URL: <code>" + window.location.origin + "/encurtador/</code>\n3. Authorization callback URL: <code>" + window.location.origin + "/encurtador/painel/</code>",
+      docStep: `1. Homepage URL: <code>${exactRedirectUri}</code>\n2. Authorization callback URL: <code>${exactRedirectUri}</code>`,
       placeholder: "Ex: Iv1.1234567890abcdef",
       configField: "githubClientId"
     },
@@ -425,7 +430,7 @@ function openOAuthSetupModal(provider) {
       name: "Microsoft / Outlook",
       portal: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
       portalName: "Azure Portal (App Registrations)",
-      docStep: "1. Registre um novo aplicativo para 'Contas Microsoft pessoais e corporativas'\n2. Plataforma: Single-page application (SPA)\n3. Redirect URI: <code>" + window.location.origin + window.location.pathname + "</code>",
+      docStep: `1. Registre um app SPA (Single-page application)\n2. Redirect URI: <code>${exactRedirectUri}</code>`,
       placeholder: "Ex: 00000000-0000-0000-0000-000000000000",
       configField: "microsoftClientId"
     }
@@ -445,15 +450,15 @@ function openOAuthSetupModal(provider) {
       </div>
       
       <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.85rem; line-height: 1.5;">
-        Para que o <strong>${providerInfo.name}</strong> autorize o login diretamente no seu domínio (<code>${window.location.origin}</code>), você precisa informar o <strong>Client ID</strong> do seu aplicativo:
+        Para conectar diretamente pelo <strong>${providerInfo.name}</strong>, preencha o formulário de cadastro com a URL de redirecionamento exata:
       </p>
 
-      <div class="info-card" style="padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.84rem; background: rgba(0,0,0,0.3);">
-        <p style="margin-bottom: 0.4rem; color: #7dd3fc; font-weight: 600;">Como obter seu Client ID gratuito em 2 minutos:</p>
-        <div style="color: var(--text-secondary); white-space: pre-line; line-height: 1.5; font-size: 0.82rem;">
+      <div class="info-card" style="padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.84rem; background: rgba(0,0,0,0.3); border-radius: 8px;">
+        <p style="margin-bottom: 0.4rem; color: #7dd3fc; font-weight: 600;">Copie os dados para preencher no ${providerInfo.name}:</p>
+        <div style="color: var(--text-secondary); white-space: pre-line; line-height: 1.6; font-size: 0.82rem;">
           ${providerInfo.docStep}
         </div>
-        <div style="margin-top: 0.6rem;">
+        <div style="margin-top: 0.75rem;">
           <a href="${providerInfo.portal}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; display: inline-flex;">
             Abrir ${providerInfo.portalName} ↗
           </a>
@@ -500,6 +505,7 @@ function openOAuthSettingsModal() {
   closeLoginModal();
   let modal = document.querySelector("#oauth-settings-modal");
   const config = window.authManager.config;
+  const exactRedirectUri = window.authManager.getRedirectUri();
 
   if (!modal) {
     modal = document.createElement("div");
@@ -514,7 +520,7 @@ function openOAuthSettingsModal() {
         <button class="modal-close-btn" onclick="closeOAuthSettingsModal()">&times;</button>
       </div>
       <p style="color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 1rem;">
-        Cadastre os Client IDs dos seus aplicativos autorizados para o domínio <code>${window.location.origin}</code>:
+        URL de Redirecionamento (Callback) padrão: <br/><strong style="color: var(--accent-primary); font-family: monospace;">${exactRedirectUri}</strong>
       </p>
 
       <form onsubmit="saveAllOAuthKeys(event)">
