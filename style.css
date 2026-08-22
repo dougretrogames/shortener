@@ -94,7 +94,7 @@ body {
 /* Header & Navbar */
 .site-header {
   border-bottom: 1px solid var(--border-color);
-  background: rgba(10, 15, 29, 0.88);
+  background: rgba(10, 15, 29, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   position: sticky;
@@ -104,14 +104,14 @@ body {
 }
 
 .header-container {
-  max-width: 1080px;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 0.8rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .brand {
@@ -947,10 +947,10 @@ footer a:hover {
    Responsividade Avançada & Adaptação para Telas Móveis
    ========================================================================== */
 
-/* Tablets e dispositivos médios */
-@media (max-width: 900px) {
+/* Telas médias e Tablets */
+@media (max-width: 1060px) {
   .header-container {
-    padding: 0.75rem 1.25rem;
+    padding: 0.75rem 1rem;
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -965,8 +965,8 @@ footer a:hover {
   }
 
   .nav-link {
-    padding: 0.35rem 0.6rem;
-    font-size: 0.82rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.8rem;
   }
 }
 
@@ -1107,16 +1107,16 @@ footer a:hover {
 
 /* Menu de Usuário no Cabeçalho */
 .user-profile-menu {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .user-avatar-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.25rem 0.65rem 0.25rem 0.35rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.35rem;
   background: var(--bg-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
@@ -1125,6 +1125,7 @@ footer a:hover {
   font-size: 0.82rem;
   font-weight: 600;
   transition: all var(--transition-fast);
+  min-height: 36px;
 }
 
 .user-avatar-btn:hover {
@@ -1133,37 +1134,40 @@ footer a:hover {
 }
 
 .user-avatar-img {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
   background: rgba(56, 189, 248, 0.2);
 }
 
-.provider-badge {
-  font-size: 0.65rem;
-  padding: 0.15rem 0.4rem;
+.user-name-label {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   border-radius: var(--radius-full);
-  text-transform: capitalize;
-  font-weight: 700;
+  color: #fca5a5;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 36px;
+  transition: all var(--transition-fast);
 }
 
-.provider-badge.google {
-  background: rgba(234, 67, 53, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(234, 67, 53, 0.3);
-}
-
-.provider-badge.github {
-  background: rgba(255, 255, 255, 0.12);
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-}
-
-.provider-badge.microsoft {
-  background: rgba(0, 164, 239, 0.15);
-  color: #38bdf8;
-  border: 1px solid rgba(0, 164, 239, 0.3);
+.user-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+  color: #ffffff;
 }
 
 /* Modal Backdrop & Card */
