@@ -48,7 +48,7 @@ const supabaseDb = {
   // Busca um link pelo slug no Supabase
   async getLink(slug) {
     if (!slug) return null;
-    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}&select=*`;
       const res = await fetch(endpoint, {
@@ -67,7 +67,7 @@ const supabaseDb = {
     return null;
   },
 
-  // Busca todos os links cadastrados no Supabase para sincronização geral
+  // Retorna todos os links da nuvem
   async getAllLinks() {
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?select=*&order=created_at.desc`;
@@ -80,12 +80,12 @@ const supabaseDb = {
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     } catch (e) {
-      console.warn("[Supabase] Falha ao listar todos os links:", e);
+      console.error("[Supabase] Falha ao buscar todos os links:", e);
       return [];
     }
   },
 
-  // Busca apenas os links vinculados a uma conta específica de usuário no Supabase
+  // Retorna todos os links criados por um determinado usuário do GitHub ou ID
   async getUserLinks(usernameOrId) {
     if (!usernameOrId) return [];
     const cleanUser = String(usernameOrId).trim().toLowerCase().replace(/^@/, '');
@@ -127,7 +127,7 @@ const supabaseDb = {
   // Salva um novo link no Supabase com identificação e vinculação definitiva da conta
   async saveLink({ slug, encryptedData, hint, targetUrl, authorType, authorUsername, authorId, authorName, authorAvatar }) {
     if (!slug || !encryptedData) return false;
-    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
     
     // Injeta os dados definitivos da conta criadora dentro de encrypted_data (JSONB)
     if (typeof encryptedData === "object" && encryptedData !== null) {
@@ -167,7 +167,7 @@ const supabaseDb = {
   // Atualiza os dados de autoria/vinculação de um link (usado para migrar links de visitante para usuário conectado)
   async updateLinkAuthor(slug, { authorType, authorUsername, authorId, authorName, authorAvatar }) {
     if (!slug) return false;
-    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
 
     try {
       const linkRecord = await this.getLink(cleanSlug);
@@ -206,7 +206,7 @@ const supabaseDb = {
   // Verifica se um slug já existe no Supabase
   async exists(slug) {
     if (!slug) return false;
-    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}&select=slug`;
       const res = await fetch(endpoint, {
@@ -226,7 +226,7 @@ const supabaseDb = {
   // Exclui um link no Supabase
   async deleteLink(slug) {
     if (!slug) return false;
-    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
@@ -247,7 +247,7 @@ const supabaseDb = {
   // Incrementa contador de cliques no Supabase em tempo real
   async incrementClicks(slug) {
     if (!slug) return 0;
-    const cleanSlug = String(slug).trim().toLowerCase();
+    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
     try {
       const link = await this.getLink(cleanSlug);
       if (!link) return 0;
