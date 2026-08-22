@@ -1,83 +1,204 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<html lang="pt-BR">
 
 <head>
-  <!-- Metadata -->
+  <!-- Metadados -->
   <meta charset="utf-8" />
-  <meta name="author" content="Jacob Strieb" />
-  <meta name="description" content="Password protect links using AES in the browser." />
+  <meta name="author" content="DougRetroGames / Link Lock" />
+  <meta name="description" content="Descriptografe URLs do Link Lock com segurança sem redirecionamento automático." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
 
   <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico">
 
-  <title>Decrypt Link Lock URLs</title>
+  <title>Link Lock - Descriptografar Link</title>
 
-  <!-- Styles -->
+  <!-- Estilos -->
   <link rel="stylesheet" href="../style.css" type="text/css" />
 
   <!-- Scripts -->
   <script type="text/javascript" src="../b64.js"></script>
   <script type="text/javascript" src="../api.js"></script>
-  <script type="text/javascript" src="decrypt.js"> </script>
+  <script type="text/javascript" src="decrypt.js"></script>
 </head>
 
 <body onload="main()">
-  <!-- View on GitHub ribbon -->
-  <a href="https://github.com/jstrieb/link-lock" target="_blank">
-    <img class="ribbon" src="../corner-ribbon-minified.svg" alt="View on GitHub" />
-  </a>
+  <!-- Cabeçalho & Navegação -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="../create" class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Link Lock</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../create" class="nav-link">Criar Link</a></li>
+          <li><a href="../decrypt" class="nav-link active">Descriptografar</a></li>
+          <li><a href="../hidden" class="nav-link">Favoritos Ocultos</a></li>
+          <li><a href="../bruteforce" class="nav-link">Força Bruta</a></li>
+          <li>
+            <a href="https://github.com/dougretrogames/link-lock" target="_blank" class="github-badge" rel="noreferrer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
+              Veja no GitHub
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </header>
 
-  <!-- Explanation for those who do not have JavaScript enabled -->
-  <noscript>
-  <div class="red-border">
-    <p>If you are seeing this, it means that you have JavaScript disabled. Please enable JavaScript to access the locked link.</p>
+  <main class="main-content">
+    <!-- Aviso para navegadores sem JavaScript -->
+    <noscript>
+      <div class="noscript-warning">
+        <h3>JavaScript Desativado</h3>
+        <p>Você precisa ativar o JavaScript no seu navegador para utilizar esta ferramenta de descriptografia.</p>
+      </div>
+    </noscript>
 
-    <p>This application is entirely programmed in JavaScript. This was done intentionally, so that all encryption and decryption happens client-side. This means the code runs as a distributed application, relying only on GitHub Pages for infrastructure. It also means that no data about locked links is ever stored on a server. The code is designed to be auditable so users can investigate what is happening behind the scenes.</p>
+    <!-- Exibição de Erros Globais -->
+    <div class="error-banner error" style="display: none">
+      <h3 id="errortext">Erro</h3>
+      <button class="btn btn-primary" onclick="main()">Tentar novamente</button>
+    </div>
 
-    <p>If you still want to run the application, I encourage you to clone the <a href="https://github.com/jstrieb/link-lock">source code on GitHub</a>. That way you can disable JavaScript only for trusted files on your local machine.</p>
-  </div>
-  </noscript>
+    <!-- Hero Header -->
+    <section class="page-header">
+      <div style="display: inline-flex; padding: 0.85rem; background: rgba(56, 189, 248, 0.1); border-radius: var(--radius-full); margin-bottom: 0.75rem; color: var(--accent-primary);">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+        </svg>
+      </div>
+      <h1>Descriptografar Link</h1>
+      <p>Revele a URL de destino com segurança sem redirecionamento automático do navegador.</p>
+    </section>
 
-  <!-- Display errors in a big red box -->
-  <div class="error red-border" style="display: none">
-    <p id="errortext">Error</p>
-    <button onclick="main()">Try again</button>
-    <a href="https://jstrieb.github.io/link-lock"><button>Lock a link</button></a>
-  </div>
+    <!-- Card de Informações -->
+    <div class="info-card">
+      <h2>Inspeção Segura de Links</h2>
+      <p>
+        Esta ferramenta permite descriptografar URLs do <strong>Link Lock</strong> sem abrir o site de destino imediatamente. 
+        Isso é especialmente útil se você recebeu um link e deseja inspecionar para onde ele aponta antes de navegar, prevenindo acessos indesejados.
+      </p>
+    </div>
 
-  <h1>Decrypt Link Lock URLs</h1>
-  <p>This application is for decrypting <a href="https://github.com/jstrieb/link-lock" target="_blank">Link Lock</a> URLs without automatically redirecting. This is useful if you do not trust the source of an encrypted URL. It is also useful if the URL uses a blocked protocol like <code>javascript:</code>, for example.</p>
+    <!-- Formulário de Descriptografia -->
+    <div class="card form">
+      <h2 class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5L14 6l-3-3-4 4 1.5 1.5L7 10 2 15l4 4 5-5 1.5 1.5 1.5-1.5 1.5 1.5 3.5-3.5z"></path>
+        </svg>
+        Dados do Link
+      </h2>
 
-  <p>This page is also useful if you think you have received a locked link, but it uses another domain, instead of <code>jstrieb.github.io</code>. This may be done as a means to <a target="_blank" href="https://github.com/jstrieb/link-lock/#evading-censorship">evade censorship</a>.</p>
+      <div class="form-group labeled-input">
+        <label for="encrypted-url">URL Criptografada do Link Lock</label>
+        <input 
+          type="url" 
+          id="encrypted-url" 
+          placeholder="https://...#meu-link@eyJ2Ijoi... ou #eyJ2Ijoi..." 
+          oninput="hideStatus()" 
+          required 
+          autofocus 
+        />
+      </div>
 
-  <hr />
+      <div class="form-group labeled-input">
+        <label for="password">Senha de Descriptografia</label>
+        <div class="input-wrapper">
+          <input 
+            type="password" 
+            id="password" 
+            class="has-toggle" 
+            placeholder="Digite a senha do link..." 
+            oninput="hideStatus()" 
+          />
+          <button type="button" class="input-icon-btn" onclick="togglePasswordVisibility('password', this)" title="Alternar visibilidade da senha" aria-label="Alternar visibilidade da senha">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
 
-  <div class="form">
-    <label for="encrypted-url">encrypted url</label>
-    <input type="url" id="encrypted-url" oninput="document.querySelector('.alert').style.opacity = 0" />
-    <label for="password">password</label>
-    <input type="password" id="password" />
-    <button onclick="onDecrypt()">Decrypt</button>
-    <p class="alert">INVISIBLE</p>
-  </div>
+      <button id="decrypt-btn" class="btn btn-primary btn-block" onclick="onDecrypt()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+        </svg>
+        Descriptografar
+      </button>
 
-  <hr />
+      <div id="status-box" style="margin-top: 1rem; display: none;"></div>
+    </div>
 
-  <!-- Output area -->
-  <div class="output">
-    <label for="output">output</label>
-    <input type="text" id="output" readonly/>
-    <button id="copy" onclick="onCopy('output')">Copy</button>
-    <a href="" id="open" target="_blank"><button>Open in New Tab</button></a>
-    <p class="alert" id="copy-alert">Copied</p>
-  </div>
+    <!-- Área de Saída -->
+    <div class="card output" id="output-section" style="display: none;">
+      <h2 class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        URL Descriptografada
+      </h2>
 
-  <!-- Page footer -->
+      <div class="form-group">
+        <label for="output">Destino Original</label>
+        <div class="output-box">
+          <input type="text" id="output" readonly />
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button id="copy" class="btn btn-primary" onclick="onCopy('output')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copiar URL
+        </button>
+
+        <a href="" id="open" target="_blank" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          Abrir em Nova Aba
+        </a>
+      </div>
+
+      <div class="alert-toast" id="copy-toast">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span id="toast-msg">URL copiada com sucesso!</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Rodapé -->
   <footer>
-  <hr />
-  <p class="copyright">Created by <a href="https://jstrieb.github.io">Jacob Strieb</a>.</p>
+    <p>Link Lock &bull; Criptografia AES-256 no lado do cliente &bull; <a href="https://github.com/dougretrogames/link-lock" target="_blank" rel="noreferrer">Veja no GitHub</a></p>
   </footer>
-</body>
+
+  <script>
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+      } else {
+        input.type = 'password';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      }
+    }
+  </script>
 </body>
 
 </html>
