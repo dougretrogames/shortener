@@ -38,9 +38,9 @@
       initHistory();
     }
   </script>
-  <script type="text/javascript" src="../auth.js?v=3.0"></script>
-  <script type="text/javascript" src="../tracker.js"></script>
-  <script type="text/javascript" src="criar.js"></script>
+  <script type="text/javascript" src="../auth.js?v=3.1"></script>
+  <script type="text/javascript" src="../tracker.js?v=3.1"></script>
+  <script type="text/javascript" src="criar.js?v=3.1"></script>
 </head>
 
 <body onload="main()">
@@ -135,11 +135,10 @@
       <div class="form-group labeled-input">
         <label for="url">Link Secreto (URL de Destino)</label>
         <input 
-          type="url" 
+          type="text" 
           id="url" 
-          placeholder="https://exemplo.com/pagina-secreta" 
-          oninvalid="if (!this.validity.customError) this.setCustomValidity('Por favor, insira uma URL válida iniciando com http://, https:// ou magnet:')" 
-          oninput="this.setCustomValidity('')" 
+          placeholder="https://exemplo.com/pagina-secreta ou exemplo.com" 
+          autocomplete="off"
           required 
           autofocus
         />

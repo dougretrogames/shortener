@@ -198,34 +198,37 @@ function highlight(id) {
   return output;
 }
 
-// Valida todos os campos obrigatórios do formulário
+// Valida e formata a URL e campos obrigatórios do formulário
 function validateInputs() {
-  const inputs = document.querySelectorAll(".form .labeled-input input");
-  for (let i = 0; i < inputs.length; i++) {
-    let input = inputs[i];
-    input.reportValidity = input.reportValidity || (() => true);
-    if (!input.reportValidity()) {
-      return false;
-    }
+  const urlInput = document.querySelector("#url");
+  if (!urlInput) return false;
+
+  let rawUrl = (urlInput.value || "").trim();
+  if (!rawUrl) {
+    alert("Por favor, insira o link de destino que deseja encurtar ou proteger.");
+    urlInput.focus();
+    return false;
   }
 
-  const url = document.querySelector("#url");
+  // Se o usuário não digitou o protocolo (ex: google.com), adiciona https://
+  if (!/^[a-zA-Z]+:\/\//.test(rawUrl) && !rawUrl.startsWith("magnet:")) {
+    rawUrl = "https://" + rawUrl;
+    urlInput.value = rawUrl;
+  }
+
   let urlObj;
   try {
-    urlObj = new URL(url.value);
+    urlObj = new URL(rawUrl);
   } catch {
-    if (!("reportValidity" in url)) {
-      alert("URL inválida. Certifique-se de incluir 'http://', 'https://' ou 'magnet:' no início.");
-    }
-    url.setCustomValidity("Por favor, insira uma URL válida iniciando com http://, https:// ou magnet:");
-    url.reportValidity();
+    alert("Por favor, insira uma URL válida (ex: https://exemplo.com)");
+    urlInput.focus();
     return false;
   }
 
   // Permite apenas protocolos seguros para evitar ataques XSS
   if (!(urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:")) {
-    url.setCustomValidity(`O link utiliza um protocolo não seguro ou não permitido (${urlObj.protocol}).`);
-    url.reportValidity();
+    alert(`O link utiliza o protocolo "${urlObj.protocol}", que não é permitido por segurança. Use http://, https:// ou magnet:`);
+    urlInput.focus();
     return false;
   }
 
@@ -277,84 +280,125 @@ async function generateFragment(url, passwd, hint, useRandomSalt, useRandomIv) {
 
 // Disparado ao clicar no botão "Gerar Link Encurtado"
 async function onEncrypt() {
-  if (!validateInputs()) {
-    return;
-  }
+  const encryptBtn = document.querySelector("#encrypt");
+  const originalBtnHtml = encryptBtn ? encryptBtn.innerHTML : "Gerar Link Encurtado";
 
-  // Validação de confirmação de senha apenas se informada
-  const passwordInput = document.querySelector("#password");
-  const confirmPasswordInput = document.querySelector("#confirm-password");
-  
-  if (passwordInput.value && passwordInput.value !== confirmPasswordInput.value) {
-    confirmPasswordInput.setCustomValidity("As senhas não coincidem. Digite a mesma senha em ambos os campos.");
-    confirmPasswordInput.reportValidity();
-    return;
-  }
+  try {
+    if (!validateInputs()) {
+      return;
+    }
 
-  // Parâmetros de criptografia
-  const url = document.querySelector("#url").value.trim();
-  const useRandomIv = document.querySelector("#iv").checked;
-  const useRandomSalt = document.querySelector("#salt").checked;
-  const hint = document.querySelector("#hint").value.trim();
-  const rawSlug = document.querySelector("#custom-slug").value.trim();
-  const customSlug = normalizeSlug(rawSlug);
+    // Validação de confirmação de senha apenas se informada
+    const passwordInput = document.querySelector("#password");
+    const confirmPasswordInput = document.querySelector("#confirm-password");
+    
+    if (passwordInput && confirmPasswordInput && passwordInput.value) {
+      if (passwordInput.value !== confirmPasswordInput.value) {
+        alert("As senhas não coincidem. Digite a mesma senha em ambos os campos de confirmação.");
+        confirmPasswordInput.focus();
+        return;
+      }
+    }
 
-  const encrypted = await generateFragment(url, passwordInput.value, hint, useRandomSalt, useRandomIv);
-  
-  // Constrói a URL de forma dinâmica considerando o domínio e caminho atual
-  const baseUrl = new URL('../', window.location.href).href;
-  
-  // Se houver apelido personalizado, anexa formato #slug@encrypted
-  let outputUrl = "";
-  let rawHash = "";
-  if (customSlug) {
-    rawHash = `${encodeURIComponent(customSlug)}@${encrypted}`;
-    outputUrl = `${baseUrl}#${rawHash}`;
-  } else {
-    rawHash = encrypted;
-    outputUrl = `${baseUrl}#${rawHash}`;
-  }
+    if (encryptBtn) {
+      encryptBtn.disabled = true;
+      encryptBtn.innerHTML = `
+        <div style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        <span>Gerando Link...</span>
+      `;
+    }
 
-  const outputField = document.querySelector("#output");
-  outputField.value = outputUrl;
-  
-  // Salva no histórico de links personalizados se houver apelido ou link criado
-  if (customSlug || url) {
-    saveToHistory({
-      slug: customSlug || "link-" + Math.random().toString(36).substring(2, 7),
-      outputUrl: outputUrl,
-      targetUrl: url,
-      hint: hint,
-      createdAt: new Date().toISOString()
+    // Parâmetros de criptografia
+    const url = document.querySelector("#url").value.trim();
+    const ivCheckbox = document.querySelector("#iv");
+    const saltCheckbox = document.querySelector("#salt");
+    const useRandomIv = ivCheckbox ? ivCheckbox.checked : true;
+    const useRandomSalt = saltCheckbox ? saltCheckbox.checked : true;
+    const hint = document.querySelector("#hint") ? document.querySelector("#hint").value.trim() : "";
+    const rawSlug = document.querySelector("#custom-slug") ? document.querySelector("#custom-slug").value.trim() : "";
+    const customSlug = normalizeSlug(rawSlug);
+
+    const encrypted = await generateFragment(url, passwordInput ? passwordInput.value : "", hint, useRandomSalt, useRandomIv);
+    
+    // Constrói a URL de forma dinâmica considerando o domínio e caminho atual
+    const baseUrl = new URL('../', window.location.href).href;
+    
+    // Se houver apelido personalizado, anexa formato #slug@encrypted
+    let outputUrl = "";
+    let rawHash = "";
+    if (customSlug) {
+      rawHash = `${encodeURIComponent(customSlug)}@${encrypted}`;
+      outputUrl = `${baseUrl}#${rawHash}`;
+    } else {
+      rawHash = encrypted;
+      outputUrl = `${baseUrl}#${rawHash}`;
+    }
+
+    const outputField = document.querySelector("#output");
+    if (outputField) {
+      outputField.value = outputUrl;
+    }
+    
+    // Salva no histórico de links personalizados se houver apelido ou link criado
+    if (customSlug || url) {
+      saveToHistory({
+        slug: customSlug || "link-" + Math.random().toString(36).substring(2, 7),
+        outputUrl: outputUrl,
+        targetUrl: url,
+        hint: hint,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // Exibe a seção de saída
+    const outputSection = document.querySelector("#output-section");
+    if (outputSection) {
+      outputSection.style.display = "block";
+    }
+
+    // Ajusta o link de "Favorito Oculto"
+    const bookmarkLink = document.querySelector("#bookmark");
+    if (bookmarkLink) {
+      const hiddenBaseUrl = new URL('../favoritos-ocultos/', window.location.href).href;
+      bookmarkLink.href = `${hiddenBaseUrl}#${rawHash}`;
+    }
+
+    // Ajusta o link de "Testar Link"
+    const openLink = document.querySelector("#open");
+    if (openLink) {
+      openLink.href = outputUrl;
+    }
+
+    setTimeout(() => {
+      try { highlight("output"); } catch (e) {}
+    }, 50);
+
+    if (encryptBtn) {
+      encryptBtn.disabled = false;
+      encryptBtn.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <span>Link Gerado com Sucesso!</span>
+      `;
+      setTimeout(() => {
+        if (encryptBtn) encryptBtn.innerHTML = originalBtnHtml;
+      }, 3000);
+    }
+
+    // Rolagem suave até a área de resultado
+    window.scrollTo({
+      top: outputSection ? outputSection.offsetTop - 80 : document.body.scrollHeight,
+      behavior: "smooth",
     });
+  } catch (err) {
+    console.error("Erro ao gerar link:", err);
+    alert("Ocorreu um erro ao gerar o link: " + (err.message || err));
+    if (encryptBtn) {
+      encryptBtn.disabled = false;
+      encryptBtn.innerHTML = originalBtnHtml;
+    }
   }
-
-  // Exibe a seção de saída
-  const outputSection = document.querySelector("#output-section");
-  if (outputSection) {
-    outputSection.style.display = "block";
-  }
-
-  highlight("output");
-
-  // Ajusta o link de "Favorito Oculto"
-  const hiddenBaseUrl = new URL('../favoritos-ocultos/', window.location.href).href;
-  const bookmarkLink = document.querySelector("#bookmark");
-  if (bookmarkLink) {
-    bookmarkLink.href = `${hiddenBaseUrl}#${rawHash}`;
-  }
-
-  // Ajusta o link de "Testar Link"
-  const openLink = document.querySelector("#open");
-  if (openLink) {
-    openLink.href = outputUrl;
-  }
-
-  // Rolagem suave até a área de resultado
-  window.scrollTo({
-    top: outputSection ? outputSection.offsetTop - 80 : document.body.scrollHeight,
-    behavior: "smooth",
-  });
 }
 
 // Disparado ao clicar em "Copiar Link"
