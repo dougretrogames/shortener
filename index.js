@@ -21,12 +21,12 @@ function error(text) {
 
 // Extrai o identificador ou dados do link da URL (suporta caminho direto /slug, hash #/slug ou query ?slug)
 function extractTargetFromLocation() {
-  // 1. Tenta obter pelo Pathname (ex: /encurtador/retrogamebox-vip ou /retrogamebox-vip)
+  // 1. Tenta obter pelo Pathname (ex: /shortener/retrogamebox-vip, /encurtador/retrogamebox-vip ou /retrogamebox-vip)
   const pathname = window.location.pathname || "";
   const segments = pathname.split("/").filter(s => s && s.trim() !== "");
   const reservedPages = [
     "criar", "painel", "descriptografar", "favoritos-ocultos",
-    "forca-bruta", "index.html", "404.html", "encurtador"
+    "forca-bruta", "index.html", "404.html", "shortener", "encurtador"
   ];
 
   if (segments.length > 0) {

@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Módulo de Autenticação Segura GitHub (auth.js)
+ * Shortener - Módulo de Autenticação Segura GitHub (auth.js)
  * Conexão direta com perfis públicos do GitHub, sem usuários fixos ou vulnerabilidades
  */
 

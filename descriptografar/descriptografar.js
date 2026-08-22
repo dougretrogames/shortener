@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Descriptografia de Links (decrypt.js)
+ * Shortener - Descriptografia de Links (decrypt.js)
  * Traduzido e modernizado para Português do Brasil com suporte a Slugs Personalizados
  */
 

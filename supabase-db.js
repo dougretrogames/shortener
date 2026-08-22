@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Integração Supabase em Nuvem (supabase-db.js)
+ * Shortener - Integração Supabase em Nuvem (supabase-db.js)
  * Sincronização em tempo real de links encurtados para todos os visitantes do mundo
  */
 

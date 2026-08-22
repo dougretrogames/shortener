@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Módulo de Rastreamento de Cliques e Analytics (tracker.js)
+ * Shortener - Módulo de Rastreamento de Cliques e Analytics (tracker.js)
  * Contabiliza acessos, timestamps e estatísticas de uso para a Dashboard
  */
 

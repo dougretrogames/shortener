@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Lógica do Painel de Controle (painel.js)
+ * Shortener - Lógica do Painel de Controle (painel.js)
  * Gerenciamento de links, métricas de cliques, edição e exportação de dados
  */
 
@@ -499,7 +499,7 @@ function exportData(format) {
   if (format === "json") {
     content = JSON.stringify(allLinks, null, 2);
     mimeType = "application/json";
-    filename = `encurtador_links_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    filename = `shortener_links_backup_${new Date().toISOString().slice(0, 10)}.json`;
   } else if (format === "csv") {
     const headers = ["Apelido", "URL Destino", "Cliques", "Dica", "Data Criacao", "Link Completo"];
     const rows = allLinks.map(l => [
@@ -512,7 +512,7 @@ function exportData(format) {
     ]);
     content = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     mimeType = "text/csv;charset=utf-8;";
-    filename = `encurtador_links_${new Date().toISOString().slice(0, 10)}.csv`;
+    filename = `shortener_links_${new Date().toISOString().slice(0, 10)}.csv`;
   }
 
   const blob = new Blob([content], { type: mimeType });

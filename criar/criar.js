@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Gerador de Links Criptografados e Personalizados (create.js)
+ * Shortener - Gerador de Links Criptografados e Personalizados (create.js)
  * Traduzido e modernizado para Português do Brasil com Verificação de Duplicidade
  */
 
@@ -355,7 +355,10 @@ function normalizeSlug(str) {
 
 // Obtém o conjunto de TODOS os links existentes (Supabase Nuvem como autoridade principal)
 async function getAllExistingSlugs() {
-  const slugSet = new Set();
+  const slugSet = new Set([
+    "criar", "painel", "descriptografar", "favoritos-ocultos",
+    "forca-bruta", "index.html", "404.html", "shortener", "encurtador"
+  ]);
 
   // 1. Supabase (Nuvem em tempo real - Fonte Única de Verdade)
   if (window.supabaseDb) {

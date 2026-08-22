@@ -1,5 +1,5 @@
 /**
- * Encurtador de Links - Favoritos Ocultos e Disfarçados (hidden.js)
+ * Shortener - Favoritos Ocultos e Disfarçados (hidden.js)
  * Traduzido e modernizado para Português do Brasil com suporte a Slugs Personalizados
  */
 
@@ -63,7 +63,7 @@ async function onHide() {
     return;
   }
 
-  // Verifica se o hash contém dados válidos do Encurtador de Links
+  // Verifica se o hash contém dados válidos do Shortener
   const rawHash = hiddenUrl.hash.slice(1);
   let payload = rawHash;
   if (rawHash.includes("@")) {
@@ -73,7 +73,7 @@ async function onHide() {
   try {
     JSON.parse(b64.decode(payload));
   } catch {
-    showStatus("A URL protegida parece estar corrompida. Ela precisa ser um link gerado pelo Encurtador de Links.", true);
+    showStatus("A URL protegida parece estar corrompida. Ela precisa ser um link gerado pelo Shortener.", true);
     return;
   }
 

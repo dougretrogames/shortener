@@ -1,10 +1,10 @@
-# Encurtador de Links 🔒
+# Shortener 🔒
 
 > **Proteja e encurte URLs com senha usando criptografia AES-256 de padrão militar diretamente no navegador.**
 
-Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos 100% limpos (`/apelido` ou `/5digitos`)**, **banco de dados em nuvem Supabase em tempo real**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
+Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação oficial com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos 100% limpos (`/apelido` ou `/5digitos`)**, **banco de dados em nuvem Supabase em tempo real**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
 
-[👉 Acesse o Repositório no GitHub](https://github.com/dougretrogames/encurtador) | [🚀 Teste a Aplicação Online](https://dougretrogames.github.io/encurtador/criar/)
+[👉 Acesse o Repositório no GitHub](https://github.com/dougretrogames/shortener) | [🚀 Teste a Aplicação Online](https://dougretrogames.github.io/shortener/criar/)
 
 ---
 
@@ -17,8 +17,8 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 
 ### 2. 🔗 Links Curtos 100% Limpos e Elegantes (`/apelido` e `/5digitos`)
 - **URLs Ultra-Curtas (Sem `#`):** Links limpos e profissionais:
-  - Com apelido personalizado: `https://dougretrogames.github.io/encurtador/retrogamebox-vip`
-  - Automático com 5 dígitos: `https://dougretrogames.github.io/encurtador/6x8qt`
+  - Com apelido personalizado: `https://dougretrogames.github.io/shortener/retrogamebox-vip`
+  - Automático com 5 dígitos: `https://dougretrogames.github.io/shortener/6x8qt`
 - **Zero Exposição de Chave:** A chave criptografada não fica visível na barra de endereços do link compartilhado.
 
 ### 3. 🎲 Gerador Automático de Códigos de 5 Dígitos
@@ -45,7 +45,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
   - Alerta explícito de que o link será **excluído permanentemente** e não poderá ser recuperado, liberando o apelido para novos cadastros.
 
 ### 7. 🔑 Autenticação com GitHub & Dashboard (`/painel`)
-- **Login Opcional:** Conecte sua conta do GitHub para gerenciar links e acompanhar estatísticas de cliques.
+- **Login Oficial:** Conecte sua conta do GitHub via OAuth para gerenciar links e acompanhar estatísticas de cliques.
 - **Métricas e KPIs:** Acompanhe contagem de cliques em tempo real, link mais acessado e histórico detalhado.
 - **Edição e Exportação:** Edite destinos, altere dicas e exporte relatórios em **JSON** e planilha **CSV** (com sanitização contra injeção de fórmulas CWE-1236).
 
@@ -60,7 +60,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 
 ---
 
-## 🚀 Como Usar o Encurtador de Links
+## 🚀 Como Usar o Shortener
 
 ### 1. Criando um Link Protegido
 1. Acesse a página **Criar Link** (`/criar/`).
@@ -69,7 +69,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 4. *(Opcional)* Insira uma **Dica de Senha**.
 5. Digite e confirme a **Senha de Proteção** (opcional caso queira apenas encurtar).
 6. Clique em **"Criptografar e Gerar Link"**.
-7. Copie o link curto gerado (ex: `https://dougretrogames.github.io/encurtador/retrogamebox-vip` ou `/6x8qt`).
+7. Copie o link curto gerado (ex: `https://dougretrogames.github.io/shortener/retrogamebox-vip` ou `/6x8qt`).
 
 ### 2. Desbloqueando um Link
 1. Acesse o link encurtado.
@@ -85,10 +85,10 @@ Por ser uma aplicação 100% estática (HTML, CSS e JavaScript puros), não requ
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/dougretrogames/encurtador.git
+git clone https://github.com/dougretrogames/shortener.git
 
 # 2. Acesse a pasta
-cd encurtador
+cd shortener
 
 # 3. Inicie um servidor local (escolha um):
 python -m http.server 8000
@@ -107,7 +107,7 @@ Acesse `http://localhost:8000` no seu navegador.
 3. Em **Source**, selecione **Deploy from a branch**.
 4. Em **Branch**, selecione a branch **`master`** e a pasta **`/(root)`**.
 5. Clique em **Save**. Seu site estará disponível em instantes em:  
-   👉 **`https://dougretrogames.github.io/encurtador/`**
+   👉 **`https://dougretrogames.github.io/shortener/`**
 
 ---
 
@@ -129,6 +129,6 @@ Acesse `http://localhost:8000` no seu navegador.
 
 ## 🤝 Créditos e Licença
 
-- **Mantido por:** [DougRetroGames](https://github.com/dougretrogames/encurtador)
+- **Mantido por:** [DougRetroGames](https://github.com/dougretrogames/shortener)
 - **Base original inspirada em:** [Jacob Strieb](https://jstrieb.github.io)
 - **Licença:** Código aberto sob a licença [MIT](LICENSE).

@@ -8,7 +8,7 @@
 
 Em muitas situações, proteger um link por senha é essencial, mas apenas a senha pode não ser suficiente caso alguém curioso veja o favorito na sua barra de navegação com um nome suspeito.
 
-O **Encurtador de Links** oferece uma camada adicional de privacidade e discrição chamada **Bookmark Knocking (Favoritos Ocultos)**. Essa técnica permite que você salve favoritos com aparência 100% normal e inofensiva (por exemplo, um artigo da Wikipédia ou a página inicial do Gmail) e que só revelam o link secreto quando acionados em conjunto com o botão de descriptografia.
+O **Shortener** oferece uma camada adicional de privacidade e discrição chamada **Bookmark Knocking (Favoritos Ocultos)**. Essa técnica permite que você salve favoritos com aparência 100% normal e inofensiva (por exemplo, um artigo da Wikipédia ou a página inicial do Gmail) e que só revelam o link secreto quando acionados em conjunto com o botão de descriptografia.
 
 ---
 
@@ -31,5 +31,5 @@ O **Encurtador de Links** oferece uma camada adicional de privacidade e discriç
 ---
 
 ## 🤝 Créditos
-- Mantido por [DougRetroGames / Encurtador de Links](https://github.com/dougretrogames/encurtador).
+- Mantido por [DougRetroGames / Shortener](https://github.com/dougretrogames/shortener).
 - Técnica original criada por [Jacob Strieb](https://jstrieb.github.io).
