@@ -466,3 +466,49 @@ function onIvCheck(checkbox) {
     );
   }
 }
+
+// Inicialização automática de listeners e atalho Enter
+function initCreatePage() {
+  initHistory();
+
+  const encryptBtn = document.querySelector("#encrypt");
+  if (encryptBtn) {
+    encryptBtn.onclick = onEncrypt;
+  }
+
+  const urlInput = document.querySelector("#url");
+  if (urlInput) {
+    urlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onEncrypt();
+      }
+    });
+  }
+
+  const pwdInput = document.querySelector("#password");
+  if (pwdInput) {
+    pwdInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onEncrypt();
+      }
+    });
+  }
+
+  const confirmInput = document.querySelector("#confirm-password");
+  if (confirmInput) {
+    confirmInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onEncrypt();
+      }
+    });
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initCreatePage);
+} else {
+  initCreatePage();
+}
