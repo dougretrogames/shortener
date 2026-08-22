@@ -59,14 +59,26 @@ async function loadDashboardData() {
           const remote = await window.supabaseDb.getLink(link.slug);
           if (remote && remote.clicks !== undefined) {
             const remoteClicks = Number(remote.clicks) || 0;
-            if (remoteClicks !== link.clicks) {
-              link.clicks = Math.max(remoteClicks, link.clicks || 0);
+            if (link.clicks !== remoteClicks) {
+              link.clicks = remoteClicks;
               changed = true;
+              // Sincroniza também o tracker local com o valor real
+              if (window.clickTracker) {
+                if (remoteClicks === 0) {
+                  window.clickTracker.resetLink(link.slug);
+                } else {
+                  const k = link.slug.toLowerCase();
+                  if (!window.clickTracker.clicks[k]) window.clickTracker.clicks[k] = { total: 0, history: [] };
+                  window.clickTracker.clicks[k].total = remoteClicks;
+                  window.clickTracker.saveClicks();
+                }
+              }
             }
           }
         }
       }
       if (changed) {
+        localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
         renderStats();
         filterLinks();
       }
@@ -381,7 +393,10 @@ function deleteLink(slug) {
         await window.supabaseDb.deleteLink(slug);
       }
 
-      // 2. Remove do localStorage local
+      // 2. Remove do localStorage local e zera estatísticas do tracker
+      if (window.clickTracker && slug) {
+        window.clickTracker.resetLink(slug);
+      }
       allLinks = allLinks.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
       localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
 

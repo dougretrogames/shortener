@@ -117,12 +117,17 @@ function deleteHistoryItem(slug) {
         await window.supabaseDb.deleteLink(slug);
       }
 
-      // 2. Remove do localStorage local
+      // 2. Zera estatísticas no tracker local
+      if (window.clickTracker && slug) {
+        window.clickTracker.resetLink(slug);
+      }
+
+      // 3. Remove do localStorage local
       let links = getSavedLinks();
       links = links.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
       localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
 
-      // 3. Atualiza a interface e reavalia a disponibilidade na hora
+      // 4. Atualiza a interface e reavalia a disponibilidade na hora
       renderHistory();
       checkSlugAvailability();
 
@@ -149,6 +154,11 @@ function clearAllHistory() {
         for (const l of links) {
           if (l.slug) await window.supabaseDb.deleteLink(l.slug);
         }
+      }
+
+      // Zera o tracker de cliques local
+      if (window.clickTracker) {
+        window.clickTracker.clearAll();
       }
 
       localStorage.removeItem(CRIAR_STORAGE_KEY);
@@ -549,6 +559,11 @@ async function onEncrypt() {
       }
     }
 
+    // Zera qualquer estatística anterior no tracker local para este apelido recriado
+    if (window.clickTracker && customSlug) {
+      window.clickTracker.resetLink(customSlug);
+    }
+
     // Salva no histórico de links personalizados se houver apelido ou link criado
     if (customSlug || url) {
       saveToHistory({
@@ -559,6 +574,7 @@ async function onEncrypt() {
         targetUrl: url,
         hint: hint,
         encryptedData: parsedEncrypted,
+        clicks: 0,
         createdAt: new Date().toISOString()
       });
     }

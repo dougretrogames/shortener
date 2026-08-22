@@ -126,6 +126,22 @@ class ClickTracker {
     };
   }
 
+  // Zera estatísticas de um link específico quando excluído ou recriado
+  resetLink(slugOrHash) {
+    if (!slugOrHash) return;
+    const key = String(slugOrHash).toLowerCase();
+    if (this.clicks && Object.prototype.hasOwnProperty.call(this.clicks, key)) {
+      delete this.clicks[key];
+      this.saveClicks();
+    }
+  }
+
+  // Limpa todo o histórico de cliques local
+  clearAll() {
+    this.clicks = {};
+    this.saveClicks();
+  }
+
   detectDevice() {
     const ua = navigator.userAgent;
     if (/android/i.test(ua)) return "Android";
