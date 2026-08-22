@@ -1,5 +1,5 @@
 /**
- * Link Lock - Teste de Força Bruta Educacional (bruteforce.js)
+ * Encurtador de Links - Teste de Força Bruta Educacional (bruteforce.js)
  * Traduzido e modernizado para Português do Brasil com suporte a Slugs Personalizados
  */
 

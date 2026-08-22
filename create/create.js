@@ -1,5 +1,5 @@
 /**
- * Link Lock - Gerador de Links Criptografados e Personalizados (create.js)
+ * Encurtador de Links - Gerador de Links Criptografados e Personalizados (create.js)
  * Traduzido e modernizado para Português do Brasil com Verificação de Duplicidade
  */
 

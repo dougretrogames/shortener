@@ -4,13 +4,13 @@
 <head>
   <!-- Metadados -->
   <meta charset="utf-8" />
-  <meta name="author" content="DougRetroGames / Link Lock" />
-  <meta name="description" content="Ferramenta de teste de força bruta para links criptografados pelo Link Lock." />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="DougRetroGames / Encurtador de Links" />
+  <meta name="description" content="Ferramenta de teste de força bruta para links criptografados pelo Encurtador de Links." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico">
 
-  <title>Link Lock - Teste de Força Bruta</title>
+  <title>Encurtador de Links - Teste de Força Bruta</title>
 
   <!-- Estilos -->
   <link rel="stylesheet" href="../style.css" type="text/css" />
@@ -30,7 +30,7 @@
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
         </svg>
-        <span>Link Lock</span>
+        <span>Encurtador de Links</span>
       </a>
       <nav>
         <ul class="nav-links">
@@ -39,7 +39,7 @@
           <li><a href="../hidden" class="nav-link">Favoritos Ocultos</a></li>
           <li><a href="../bruteforce" class="nav-link active">Força Bruta</a></li>
           <li>
-            <a href="https://github.com/dougretrogames/link-lock" target="_blank" class="github-badge" rel="noreferrer">
+            <a href="https://github.com/dougretrogames/encurtador" target="_blank" class="github-badge" rel="noreferrer">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
               </svg>
@@ -80,7 +80,7 @@
         Um ataque de força bruta consiste em testar iterativamente todas as combinações possíveis de senhas até encontrar a chave correta.
       </p>
       <p>
-        O <strong>Link Lock</strong> emprega derivação de chave <code>PBKDF2</code> com <strong>100.000 iterações</strong> de <code>SHA-256</code> e criptografia <code>AES-256-GCM</code>. 
+        O <strong>Encurtador de Links</strong> emprega derivação de chave <code>PBKDF2</code> com <strong>100.000 iterações</strong> de <code>SHA-256</code> e criptografia <code>AES-256-GCM</code>. 
         Essa configuração torna a verificação de cada tentativa computacionalmente pesada, inviabilizando ataques de força bruta contra senhas médias e fortes no navegador.
       </p>
     </div>
@@ -110,7 +110,7 @@
       </div>
 
       <div class="form-group labeled-input">
-        <label for="encrypted-url">URL Criptografada do Link Lock</label>
+        <label for="encrypted-url">URL Criptografada do Link</label>
         <input 
           type="url" 
           id="encrypted-url" 
@@ -150,7 +150,7 @@
 
   <!-- Rodapé -->
   <footer>
-    <p>Link Lock &bull; Criptografia AES-256 no lado do cliente &bull; <a href="https://github.com/dougretrogames/link-lock" target="_blank" rel="noreferrer">Veja no GitHub</a></p>
+    <p>Encurtador de Links &bull; Criptografia AES-256 no lado do cliente &bull; <a href="https://github.com/dougretrogames/encurtador" target="_blank" rel="noreferrer">Veja no GitHub</a></p>
   </footer>
 </body>
 

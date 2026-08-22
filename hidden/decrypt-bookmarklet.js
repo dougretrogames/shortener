@@ -90,14 +90,18 @@ var b64 = (() => {
   }
 })();
 
-const hash = window.location.hash.slice(1);
+const rawHash = window.location.hash.slice(1);
+let payload = rawHash;
+if (rawHash.includes("@")) {
+  payload = rawHash.slice(rawHash.indexOf("@") + 1);
+}
 try {
-  const decoded = b64.decode(hash);
+  const decoded = b64.decode(payload);
   const params = JSON.parse(decoded);
   if (params.unencrypted) {
     window.location.href = params.url;
   } else {
-    window.location.href = "https://jstrieb.github.io/link-lock/" + window.location.hash;
+    window.location.href = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, "/") + window.location.hash;
   }
 } catch {
   window.location.replace("https://gmail.com");
