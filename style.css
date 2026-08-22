@@ -263,6 +263,8 @@ body {
   cursor: pointer;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -270,6 +272,24 @@ body {
   background: rgba(255, 255, 255, 0.1);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
+}
+
+.mobile-menu-toggle .hamburger-icon-close {
+  display: none;
+}
+
+.site-header.mobile-nav-open .mobile-menu-toggle {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.site-header.mobile-nav-open .mobile-menu-toggle .hamburger-icon-open {
+  display: none;
+}
+
+.site-header.mobile-nav-open .mobile-menu-toggle .hamburger-icon-close {
+  display: block;
 }
 
 @keyframes slideDownNav {
@@ -285,12 +305,94 @@ body {
 
 @media (max-width: 768px) {
   .header-container {
-    padding: 0.65rem 1rem;
+    padding: 0.55rem 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
     position: relative;
+    width: 100%;
   }
-  
+
+  .brand {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    font-size: 1.05rem;
+    gap: 0.4rem;
+  }
+
+  .brand-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .header-right-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    margin-left: 0.35rem;
+    gap: 0.35rem;
+  }
+
+  .auth-slot {
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-slot .auth-login-btn {
+    padding: 0.3rem 0.55rem !important;
+    font-size: 0.78rem !important;
+    min-height: 32px !important;
+    gap: 0.35rem !important;
+    white-space: nowrap;
+  }
+
+  .user-profile-menu {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .user-avatar-btn {
+    padding: 0.15rem 0.45rem 0.15rem 0.25rem;
+    font-size: 0.76rem;
+    min-height: 32px;
+    gap: 0.3rem;
+  }
+
+  .user-avatar-img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .user-name-label {
+    max-width: 85px;
+    font-size: 0.76rem;
+  }
+
+  .user-logout-btn {
+    padding: 0.2rem 0.45rem;
+    font-size: 0.74rem;
+    min-height: 32px;
+    gap: 0.25rem;
+  }
+
+  .user-logout-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
   .mobile-menu-toggle {
     display: inline-flex;
+    margin-left: auto;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    flex-shrink: 0;
   }
 
   .site-header nav {

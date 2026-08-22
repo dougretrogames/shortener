@@ -438,8 +438,11 @@ async function handleOAuthCallback() {
   }
 }
 
-// Controle do Menu Hambúrguer Mobile
-function toggleMobileMenu() {
+// Controle do Menu Hambúrguer Mobile (100% confiável, sem substituição de DOM e com controle de propagação)
+function toggleMobileMenu(event) {
+  if (event) {
+    if (typeof event.stopPropagation === "function") event.stopPropagation();
+  }
   const header = document.querySelector(".site-header");
   const toggleBtn = document.querySelector(".mobile-menu-toggle");
   if (!header) return;
@@ -447,9 +450,6 @@ function toggleMobileMenu() {
   const isOpen = header.classList.toggle("mobile-nav-open");
   if (toggleBtn) {
     toggleBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    toggleBtn.innerHTML = isOpen 
-      ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
-      : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`;
   }
 }
 
@@ -460,18 +460,24 @@ function closeMobileMenu() {
     header.classList.remove("mobile-nav-open");
     if (toggleBtn) {
       toggleBtn.setAttribute("aria-expanded", "false");
-      toggleBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`;
     }
   }
 }
 
-// Fecha o menu mobile ao clicar fora dele
+// Fecha o menu mobile ao clicar em links internos ou fora do cabeçalho
 document.addEventListener("click", (e) => {
   const header = document.querySelector(".site-header");
   if (!header || !header.classList.contains("mobile-nav-open")) return;
 
-  const clickedInside = header.contains(e.target);
-  if (!clickedInside) {
+  // Não fecha se o clique foi diretamente no botão de abrir/fechar o menu
+  if (e.target && e.target.closest && e.target.closest(".mobile-menu-toggle")) return;
+
+  // Fecha se clicou em um link do menu ou fora do cabeçalho
+  if (e.target && e.target.closest) {
+    if (e.target.closest(".nav-link") || e.target.closest(".github-badge") || !e.target.closest(".site-header")) {
+      closeMobileMenu();
+    }
+  } else {
     closeMobileMenu();
   }
 });
