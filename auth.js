@@ -415,9 +415,9 @@ function openOAuthSetupModal(provider) {
     },
     github: {
       name: "GitHub",
-      portal: "https://github.com/settings/developers",
-      portalName: "GitHub Developer Settings (OAuth Apps)",
-      docStep: "1. Clique em 'New OAuth App'\n2. Homepage URL: <code>" + window.location.origin + "</code>\n3. Authorization callback URL: <code>" + window.location.origin + window.location.pathname + "</code>",
+      portal: "https://github.com/settings/applications/new",
+      portalName: "GitHub - Registrar Novo OAuth App",
+      docStep: "1. Preencha o nome do aplicativo (ex: Encurtador)\n2. Homepage URL: <code>" + window.location.origin + "/encurtador/</code>\n3. Authorization callback URL: <code>" + window.location.origin + "/encurtador/painel/</code>",
       placeholder: "Ex: Iv1.1234567890abcdef",
       configField: "githubClientId"
     },
