@@ -75,23 +75,37 @@ async function main() {
       } catch {}
     }
 
-    // Caso 3: Apelido curto limpo (ex: #retrogamebox-vip) - busca no db.json e no localStorage
+    // Caso 3: Apelido curto limpo (ex: #retrogamebox-vip ou #6x8qt) - busca no Supabase, db.json e localStorage
     if (!params) {
       customSlug = decodeURIComponent(rawHash).trim();
       const slugKey = customSlug.toLowerCase();
 
-      // Busca no banco de dados db.json do repositório
-      let db = {};
-      try {
-        const dbRes = await fetch('./db.json?t=' + Date.now(), { cache: 'no-store' });
-        if (dbRes.ok) {
-          db = await dbRes.json();
+      // Busca no Supabase (Nuvem em tempo real para todos os usuários)
+      let entry = null;
+      if (window.supabaseDb) {
+        try {
+          const remoteLink = await window.supabaseDb.getLink(slugKey);
+          if (remoteLink && remoteLink.encrypted_data) {
+            entry = remoteLink.encrypted_data;
+          }
+        } catch (e) {
+          console.warn("[Supabase] Erro ao buscar link remoto:", e);
         }
-      } catch (e) {
-        console.warn("db.json não pôde ser carregado:", e);
       }
 
-      let entry = db[slugKey] || db[customSlug];
+      // Busca no banco de dados db.json do repositório
+      if (!entry) {
+        let db = {};
+        try {
+          const dbRes = await fetch('./db.json?t=' + Date.now(), { cache: 'no-store' });
+          if (dbRes.ok) {
+            db = await dbRes.json();
+          }
+        } catch (e) {
+          console.warn("db.json não pôde ser carregado:", e);
+        }
+        entry = db[slugKey] || db[customSlug];
+      }
 
       // Se não encontrou no db.json, procura no histórico local (localStorage)
       if (!entry) {

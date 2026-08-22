@@ -121,6 +121,11 @@ function deleteHistoryItem(slug) {
         delete globalDbCache[slug.toLowerCase()];
       }
 
+      // Exclui do banco de dados na nuvem Supabase
+      if (window.supabaseDb && slug) {
+        window.supabaseDb.deleteLink(slug);
+      }
+
       renderHistory();
       checkSlugAvailability();
 
@@ -267,18 +272,41 @@ async function getGlobalDatabase() {
   return {};
 }
 
-// Obtém o conjunto de TODOS os links existentes (Banco global db.json de todos os usuários + LocalStorage)
+// Obtém o conjunto de TODOS os links existentes (Supabase Nuvem + db.json + LocalStorage)
 async function getAllExistingSlugs() {
-  const db = await getGlobalDatabase();
-  const localLinks = getSavedLinks();
   const slugSet = new Set();
 
+  // 1. Supabase (Nuvem em tempo real para todo o planeta)
+  if (window.supabaseDb) {
+    try {
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?select=slug`;
+      const res = await fetch(endpoint, {
+        method: "GET",
+        headers: window.supabaseDb.getHeaders()
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+          rows.forEach(r => {
+            if (r.slug) slugSet.add(r.slug.toLowerCase());
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[Supabase] Erro ao carregar slugs remotos:", e);
+    }
+  }
+
+  // 2. Banco do repositório db.json
+  const db = await getGlobalDatabase();
   if (db && typeof db === "object") {
     Object.keys(db).forEach(k => {
       if (k) slugSet.add(k.toLowerCase());
     });
   }
 
+  // 3. LocalStorage
+  const localLinks = getSavedLinks();
   localLinks.forEach(l => {
     if (l.slug) slugSet.add(l.slug.toLowerCase());
   });
@@ -526,6 +554,20 @@ async function onEncrypt() {
       parsedEncrypted = JSON.parse(b64.decode(encrypted));
     } catch {}
     
+    // Salva no Supabase Nuvem (visível e ativo para qualquer pessoa no planeta em 50ms)
+    if (window.supabaseDb && customSlug) {
+      try {
+        await window.supabaseDb.saveLink({
+          slug: customSlug,
+          encryptedData: parsedEncrypted,
+          hint: hint,
+          targetUrl: url
+        });
+      } catch (e) {
+        console.warn("[Supabase] Erro ao salvar na nuvem:", e);
+      }
+    }
+
     // Salva no histórico de links personalizados se houver apelido ou link criado
     if (customSlug || url) {
       saveToHistory({
