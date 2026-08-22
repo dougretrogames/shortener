@@ -275,13 +275,82 @@ function copyLink(url) {
   });
 }
 
-function deleteLink(slug) {
-  if (!confirm(`Deseja realmente excluir o link "${slug}" do seu painel?`)) return;
+// Abre a tela modal moderna de confirmação de exclusão no painel
+function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
+  let modal = document.querySelector("#confirm-delete-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "confirm-delete-modal";
+    modal.className = "modal-backdrop";
+    document.body.appendChild(modal);
+  }
 
-  allLinks = allLinks.filter(l => (l.slug || "").toLowerCase() !== slug.toLowerCase());
-  localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
-  showToast(`Link "${slug}" removido com sucesso.`);
-  loadDashboardData();
+  const title = customTitle || "Confirmar Exclusão";
+  const targetText = slug ? `/#/${slug}` : "Link selecionado";
+  const msg = customMsg || `Tem certeza de que deseja excluir este link do seu painel? Esta ação liberará o identificador para novos cadastros e não pode ser desfeita.`;
+
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2rem 1.75rem;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; color: #ef4444;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+
+      <h2 style="font-size: 1.3rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem;">${escapeHtml(title)}</h2>
+      
+      <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1rem; word-break: break-all; font-family: monospace; font-size: 0.95rem; color: #38bdf8; font-weight: 600;">
+        ${escapeHtml(targetText)}
+      </div>
+
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
+        ${escapeHtml(msg)}
+      </p>
+
+      <div style="display: flex; gap: 0.75rem; justify-content: center;">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()" style="flex: 1; padding: 0.75rem 1rem;">
+          Cancelar
+        </button>
+        <button type="button" id="confirm-delete-action-btn" class="btn btn-danger" style="flex: 1; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Confirmar Exclusão</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = "flex";
+
+  const confirmBtn = modal.querySelector("#confirm-delete-action-btn");
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      closeDeleteModal();
+      if (typeof onConfirm === "function") {
+        onConfirm();
+      }
+    };
+  }
+}
+
+function closeDeleteModal() {
+  const modal = document.querySelector("#confirm-delete-modal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function deleteLink(slug) {
+  openDeleteModal(slug, () => {
+    allLinks = allLinks.filter(l => (l.slug || "").toLowerCase() !== slug.toLowerCase());
+    localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
+    showToast(`Link "/#/${slug}" removido com sucesso.`);
+    loadDashboardData();
+  });
 }
 
 // Sanitização contra CSV Formula Injection (CWE-1236)
