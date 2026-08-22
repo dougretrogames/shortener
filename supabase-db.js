@@ -20,10 +20,100 @@ const supabaseDb = {
     };
   },
 
-  // Retorna a URL para redirecionamento oficial de OAuth do provedor
-  getOAuthUrl(provider = "github", redirectTo = "") {
-    const cleanRedirect = redirectTo || (typeof window !== "undefined" ? window.location.href.split('#')[0] : "");
+  // Gera o code_verifier seguro para fluxo PKCE
+  generateCodeVerifier() {
+    const array = new Uint8Array(32);
+    if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(array);
+    } else {
+      for (let i = 0; i < 32; i++) array[i] = Math.floor(Math.random() * 256);
+    }
+    let str = "";
+    for (let i = 0; i < array.length; i++) {
+      str += String.fromCharCode(array[i]);
+    }
+    return (typeof btoa === "function" ? btoa(str) : Buffer.from(str).toString('base64'))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  },
+
+  // Gera o code_challenge SHA-256 base64url para fluxo PKCE
+  async generateCodeChallenge(verifier) {
+    if (typeof window !== "undefined" && window.crypto && window.crypto.subtle) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      const digest = await window.crypto.subtle.digest('SHA-256', data);
+      const digestArray = new Uint8Array(digest);
+      let str = "";
+      for (let i = 0; i < digestArray.length; i++) {
+        str += String.fromCharCode(digestArray[i]);
+      }
+      return btoa(str)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    }
+    return verifier;
+  },
+
+  // Retorna a URL para redirecionamento oficial de OAuth do provedor (com PKCE e suporte a implicit)
+  async getOAuthUrl(provider = "github", redirectTo = "") {
+    const cleanRedirect = redirectTo || (typeof window !== "undefined" ? window.location.href.split('#')[0].split('?')[0] : "");
+    
+    try {
+      if (typeof window !== "undefined" && window.crypto && window.crypto.subtle) {
+        const verifier = this.generateCodeVerifier();
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem("sb_auth_code_verifier", verifier);
+        }
+        const challenge = await this.generateCodeChallenge(verifier);
+        return `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(cleanRedirect)}&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=s256`;
+      }
+    } catch (e) {
+      console.warn("[OAuth] Fallback para fluxo padrão:", e);
+    }
+    
     return `${SUPABASE_CONFIG.url}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(cleanRedirect)}`;
+  },
+
+  // Troca o código PKCE retornado pelo Supabase por tokens de sessão
+  async exchangeCodeForSession(code) {
+    if (!code) return null;
+    const verifier = (typeof localStorage !== "undefined" ? localStorage.getItem("sb_auth_code_verifier") : "") || "";
+    try {
+      const endpoint = `${SUPABASE_CONFIG.url}/auth/v1/token?grant_type=pkce`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_CONFIG.key,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          auth_code: code,
+          code_verifier: verifier
+        })
+      });
+
+      if (res.ok) {
+        if (typeof localStorage !== "undefined") localStorage.removeItem("sb_auth_code_verifier");
+        return await res.json();
+      } else {
+        // Fallback caso seja código padrão
+        const res2 = await fetch(`${SUPABASE_CONFIG.url}/auth/v1/token?grant_type=authorization_code`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_CONFIG.key,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ code: code })
+        });
+        if (res2.ok) return await res2.json();
+      }
+    } catch (e) {
+      console.error("[Supabase] Erro ao trocar código por token:", e);
+    }
+    return null;
   },
 
   // Obtém dados do usuário a partir do token de acesso OAuth retornado pelo Supabase

@@ -634,12 +634,13 @@ async function onEncrypt() {
       parsedEncrypted = JSON.parse(b64.decode(encrypted));
     } catch {}
     
-    const authUser = window.authManager ? window.authManager.getUser() : null;
-    const authorType = isAuth && authUser ? "github" : "visitante";
-    const authorUsername = isAuth && authUser ? (authUser.username || "").toLowerCase() : "visitante";
-    const authorId = isAuth && authUser ? (authUser.id || `github_${authUser.username}`) : `guest_${Math.random().toString(36).substring(2)}`;
-    const authorName = isAuth && authUser ? (authUser.username ? `@${authUser.username}` : (authUser.name || "GitHub")) : "Visitante (Anônimo)";
-    const authorAvatar = isAuth && authUser ? (authUser.avatar || "") : "";
+    const isCurrentlyAuth = window.authManager && window.authManager.isAuthenticated();
+    const authUser = isCurrentlyAuth ? window.authManager.getUser() : null;
+    const authorType = isCurrentlyAuth && authUser ? "github" : "visitante";
+    const authorUsername = isCurrentlyAuth && authUser ? (authUser.username || "github").toLowerCase().replace(/^@/, '') : "visitante";
+    const authorId = isCurrentlyAuth && authUser ? (authUser.id || `github_${authorUsername}`) : `guest_${Math.random().toString(36).substring(2)}`;
+    const authorName = isCurrentlyAuth && authUser ? (authUser.username ? `@${authUser.username}` : (authUser.name || "GitHub")) : "Visitante (Anônimo)";
+    const authorAvatar = isCurrentlyAuth && authUser ? (authUser.avatar || "") : "";
 
     // Salva no Supabase Nuvem com vinculação à conta criadora (Multi-Dispositivo)
     if (window.supabaseDb && customSlug) {

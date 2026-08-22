@@ -272,10 +272,10 @@ function handleAuthLogout() {
 }
 
 // Redireciona diretamente para o fluxo oficial de autorização OAuth do GitHub
-function loginWithGitHubOAuth() {
-  const currentUrl = window.location.href.split('#')[0];
+async function loginWithGitHubOAuth() {
+  const currentUrl = window.location.href.split('#')[0].split('?')[0];
   const authUrl = window.supabaseDb 
-    ? window.supabaseDb.getOAuthUrl("github", currentUrl)
+    ? await window.supabaseDb.getOAuthUrl("github", currentUrl)
     : `https://nmqzjcriwggemfawpjqc.supabase.co/auth/v1/authorize?provider=github&redirect_to=${encodeURIComponent(currentUrl)}`;
   window.location.href = authUrl;
 }
@@ -326,13 +326,53 @@ function closeLoginModal() {
   if (modal) modal.style.display = "none";
 }
 
-// Processa o retorno da autorização OAuth do GitHub (Implicit Grant no hash ou PKCE)
-async function handleOAuthCallback() {
-  const hash = window.location.hash;
-  const search = window.location.search;
+// Aplica a sessão autenticada com os dados do perfil do usuário
+async function applyUserSession(data, accessToken, refreshToken) {
+  if (!data) return;
+  const meta = data.user_metadata || {};
+  const identities = data.identities || [];
+  const idData = (identities[0] && identities[0].identity_data) || {};
 
-  // Trata erros de autorização retornados na URL se houver
-  if ((hash && hash.includes("error=")) || (search && search.includes("error="))) {
+  const username = meta.user_name || meta.preferred_username || idData.user_name || idData.login || (data.email ? data.email.split('@')[0] : "usuario");
+  const name = meta.full_name || meta.name || idData.name || (username ? `@${username}` : "GitHub");
+  const avatar = meta.avatar_url || idData.avatar_url || (username ? `https://avatars.githubusercontent.com/${username}` : "");
+
+  const userData = {
+    id: data.id || ("github_" + username),
+    username: username,
+    name: name,
+    email: data.email || `${username}@github.com`,
+    avatar: avatar,
+    provider: "github",
+    providerName: "GitHub",
+    accessToken: accessToken || "",
+    refreshToken: refreshToken || "",
+    createdAt: new Date().toISOString()
+  };
+
+  window.authManager.saveUser(userData);
+  await migrateVisitorLinksToAccount(userData);
+
+  // Limpa os parâmetros de autenticação da URL mantendo o endereço limpo
+  const cleanUrl = window.location.pathname;
+  window.history.replaceState(null, document.title, cleanUrl);
+
+  renderAuthHeader();
+  if (window.location.pathname.includes("/painel") && typeof initDashboard === "function") {
+    initDashboard();
+  }
+  if (window.location.pathname.includes("/criar") && typeof updateAuthSlugState === "function") {
+    updateAuthSlugState();
+  }
+}
+
+// Processa o retorno da autorização OAuth do GitHub (Suporta tanto PKCE ?code=... quanto Implicit #access_token=...)
+async function handleOAuthCallback() {
+  const hash = window.location.hash || "";
+  const search = window.location.search || "";
+
+  // 1. Trata mensagens ou erros retornados na URL se houver
+  if (hash.includes("error=") || search.includes("error=")) {
     const params = new URLSearchParams(hash ? hash.substring(1) : search);
     const errorDesc = params.get("error_description") || params.get("error");
     if (errorDesc) {
@@ -343,7 +383,28 @@ async function handleOAuthCallback() {
     return;
   }
 
-  if (hash && hash.includes("access_token=")) {
+  // 2. Fluxo PKCE (?code=xxxx ou #code=xxxx)
+  if (search.includes("code=") || hash.includes("code=")) {
+    const searchParams = new URLSearchParams(search || (hash ? hash.substring(1) : ""));
+    const code = searchParams.get("code");
+    if (code && window.supabaseDb) {
+      try {
+        const sessionData = await window.supabaseDb.exchangeCodeForSession(code);
+        if (sessionData && (sessionData.user || sessionData.access_token)) {
+          const userObj = sessionData.user || (sessionData.access_token ? await window.supabaseDb.getUserFromToken(sessionData.access_token) : null);
+          if (userObj) {
+            await applyUserSession(userObj, sessionData.access_token, sessionData.refresh_token);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("[OAuth] Erro ao trocar code por sessão:", err);
+      }
+    }
+  }
+
+  // 3. Fluxo Implicit (#access_token=xxxx)
+  if (hash.includes("access_token=")) {
     const hashParams = new URLSearchParams(hash.substring(1));
     const accessToken = hashParams.get("access_token");
     const refreshToken = hashParams.get("refresh_token");
@@ -351,43 +412,9 @@ async function handleOAuthCallback() {
     if (accessToken && window.supabaseDb) {
       try {
         const data = await window.supabaseDb.getUserFromToken(accessToken);
-
-        if (data && (data.id || data.user_metadata || data.email)) {
-          const meta = data.user_metadata || {};
-          const identities = data.identities || [];
-          const idData = (identities[0] && identities[0].identity_data) || {};
-
-          const username = meta.user_name || meta.preferred_username || idData.user_name || idData.login || (data.email ? data.email.split('@')[0] : "usuario");
-          const name = meta.full_name || meta.name || idData.name || username;
-          const avatar = meta.avatar_url || idData.avatar_url || `https://avatars.githubusercontent.com/${username}`;
-
-          const userData = {
-            id: data.id || ("github_" + username),
-            username: username,
-            name: name,
-            email: data.email || `${username}@github.com`,
-            avatar: avatar,
-            provider: "github",
-            providerName: "GitHub",
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            createdAt: new Date().toISOString()
-          };
-
-          window.authManager.saveUser(userData);
-          await migrateVisitorLinksToAccount(userData);
-
-          // Limpa os parâmetros de autenticação da URL mantendo o endereço limpo
-          const cleanUrl = window.location.pathname + window.location.search;
-          window.history.replaceState(null, document.title, cleanUrl);
-
-          renderAuthHeader();
-          if (window.location.pathname.includes("/painel") && typeof initDashboard === "function") {
-            initDashboard();
-          }
-          if (window.location.pathname.includes("/criar") && typeof updateAuthSlugState === "function") {
-            updateAuthSlugState();
-          }
+        if (data) {
+          await applyUserSession(data, accessToken, refreshToken);
+          return;
         }
       } catch (err) {
         console.error("[OAuth] Erro ao autenticar callback do GitHub:", err);
