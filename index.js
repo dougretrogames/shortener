@@ -19,9 +19,46 @@ function error(text) {
   if (errorTextEl) errorTextEl.innerText = text;
 }
 
+// Extrai o identificador ou dados do link da URL (suporta caminho direto /slug, hash #/slug ou query ?slug)
+function extractTargetFromLocation() {
+  // 1. Tenta obter pelo Pathname (ex: /encurtador/retrogamebox-vip ou /retrogamebox-vip)
+  const pathname = window.location.pathname || "";
+  const segments = pathname.split("/").filter(s => s && s.trim() !== "");
+  const reservedPages = [
+    "criar", "painel", "descriptografar", "favoritos-ocultos",
+    "forca-bruta", "index.html", "404.html", "encurtador"
+  ];
+
+  if (segments.length > 0) {
+    const last = decodeURIComponent(segments[segments.length - 1]).trim();
+    if (last && !reservedPages.includes(last.toLowerCase())) {
+      return last;
+    }
+  }
+
+  // 2. Tenta obter pelo Hash (ex: #/retrogamebox-vip, #retrogamebox-vip ou #slug@base64)
+  if (window.location.hash) {
+    let h = window.location.hash.slice(1).trim();
+    if (h.startsWith("/")) h = h.replace(/^\/+/, '');
+    if (h) return decodeURIComponent(h);
+  }
+
+  // 3. Tenta obter pela Query String (ex: ?retrogamebox-vip ou ?s=retrogamebox-vip)
+  if (window.location.search) {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has("s")) return searchParams.get("s").trim();
+    const rawSearch = window.location.search.slice(1).replace(/^\/+/, '').trim();
+    if (rawSearch && !rawSearch.includes("=")) return decodeURIComponent(rawSearch);
+  }
+
+  return "";
+}
+
 // Executado quando o <body> é carregado
 async function main() {
-  if (window.location.hash) {
+  const rawTarget = extractTargetFromLocation();
+
+  if (rawTarget) {
     const formEl = document.querySelector(".form");
     if (formEl) formEl.style.display = "block";
     
@@ -47,27 +84,23 @@ async function main() {
       return;
     }
 
-    // Tenta obter os parâmetros codificados no fragmento da URL (suporta #/slug e #slug)
-    let rawHash = window.location.hash.slice(1);
-    if (rawHash.startsWith("/")) {
-      rawHash = rawHash.replace(/^\/+/, '');
-    }
-    let payload = rawHash;
+    let rawHash = rawTarget;
+    let payload = rawTarget;
     let customSlug = null;
     let params = null;
 
     // Caso 1: Suporte a formato composto: #meu-link@base64Data
-    if (rawHash.includes("@")) {
-      const atIndex = rawHash.indexOf("@");
-      customSlug = decodeURIComponent(rawHash.slice(0, atIndex));
-      payload = rawHash.slice(atIndex + 1);
+    if (rawTarget.includes("@")) {
+      const atIndex = rawTarget.indexOf("@");
+      customSlug = decodeURIComponent(rawTarget.slice(0, atIndex));
+      payload = rawTarget.slice(atIndex + 1);
       try {
         params = JSON.parse(b64.decode(payload));
       } catch {}
-    } else if ((rawHash.startsWith("ey") || rawHash.startsWith("e3")) && /^[A-Za-z0-9+/=_-]+$/.test(rawHash)) {
+    } else if ((rawTarget.startsWith("ey") || rawTarget.startsWith("e3")) && /^[A-Za-z0-9+/=_-]+$/.test(rawTarget)) {
       // Caso 2: Tentar decodificar direto como Base64 payload apenas se tiver formato Base64
       try {
-        const decoded = b64.decode(rawHash);
+        const decoded = b64.decode(rawTarget);
         const parsed = JSON.parse(decoded);
         if (parsed && (parsed.v || parsed.e || parsed.open || parsed.u)) {
           params = parsed;
@@ -75,9 +108,9 @@ async function main() {
       } catch {}
     }
 
-    // Caso 3: Apelido curto limpo (ex: #retrogamebox-vip ou #6x8qt) - busca no Supabase Nuvem e localStorage
+    // Caso 3: Apelido curto limpo (ex: retrogamebox-vip ou 6x8qt) - busca no Supabase Nuvem e localStorage
     if (!params) {
-      customSlug = decodeURIComponent(rawHash).trim();
+      customSlug = decodeURIComponent(rawTarget).trim();
       const slugKey = customSlug.toLowerCase();
 
       // Busca no Supabase (Nuvem em tempo real para todos os usuários)
@@ -133,6 +166,16 @@ async function main() {
       return;
     }
 
+    // Contabiliza o clique em tempo real no banco de dados Supabase imediatamente ao abrir o link
+    const finalSlug = (customSlug || (rawHash ? rawHash.split("@")[0] : "")).trim().toLowerCase();
+    if (window.supabaseDb && finalSlug) {
+      try {
+        window.supabaseDb.incrementClicks(finalSlug);
+      } catch (e) {
+        console.warn("[Supabase] Erro ao contabilizar clique na abertura:", e);
+      }
+    }
+
     // Exibe o badge de link personalizado se houver
     const slugContainer = document.querySelector("#custom-slug-container");
     const slugText = document.querySelector("#custom-slug-text");
@@ -149,19 +192,6 @@ async function main() {
       try {
         const urlObj = new URL(targetUrl);
         if (urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:") {
-          // Registra clique no Supabase
-          const finalSlug = customSlug || (rawHash ? rawHash.split("@")[0] : "");
-          if (window.supabaseDb && finalSlug) {
-            try {
-              await window.supabaseDb.incrementClicks(finalSlug);
-            } catch (e) {}
-          }
-
-          // Registra clique no tracker local
-          if (window.clickTracker) {
-            window.clickTracker.recordClick(customSlug || rawHash);
-          }
-
           // Exibe status visual de redirecionamento imediato
           if (formEl) {
             formEl.innerHTML = `
@@ -257,21 +287,6 @@ async function main() {
         if (!(urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:")) {
           error(`O link descriptografado utiliza o protocolo "${urlObj.protocol}", que não é permitido por segurança.`);
           return;
-        }
-
-        // Registra o clique no Supabase em tempo real
-        const finalSlug = customSlug || (rawHash ? rawHash.split("@")[0] : "");
-        if (window.supabaseDb && finalSlug) {
-          try {
-            await window.supabaseDb.incrementClicks(finalSlug);
-          } catch (e) {
-            console.warn("[Supabase] Erro ao incrementar cliques:", e);
-          }
-        }
-
-        // Registra o clique para estatísticas na Dashboard local
-        if (window.clickTracker) {
-          window.clickTracker.recordClick(customSlug || rawHash);
         }
 
         // Redireciona para o destino seguro

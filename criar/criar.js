@@ -5,7 +5,7 @@
 
 var CRIAR_STORAGE_KEY = "linklock_saved_custom_links";
 
-// Obtém os links salvos do LocalStorage
+// Obtém os links salvos do LocalStorage (Apenas para visitantes)
 function getSavedLinks() {
   try {
     const raw = localStorage.getItem(CRIAR_STORAGE_KEY);
@@ -16,8 +16,15 @@ function getSavedLinks() {
   }
 }
 
-// Salva ou atualiza um link no histórico
+// Salva um link no histórico (Cache local é exclusivo para visitantes; usuários logados usam Supabase)
 function saveToHistory(linkItem) {
+  const isAuth = window.authManager && window.authManager.isAuthenticated();
+  if (isAuth) {
+    // Para usuários logados, o link já está no Supabase; não grava no cache local
+    renderHistory();
+    return;
+  }
+
   try {
     const links = getSavedLinks();
     const existingIndex = links.findIndex(l => l.slug && l.slug.toLowerCase() === linkItem.slug.toLowerCase());
@@ -46,7 +53,7 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
   }
 
   const title = customTitle || "Confirmar Exclusão Permanente";
-  const targetText = slug ? `/#/${slug}` : "Todos os links salvos";
+  const targetText = slug ? `/${slug}` : "Todos os links salvos";
   const msg = customMsg || `Atenção: Este link será <strong>excluído permanentemente</strong> do sistema e <strong>não poderá ser recuperado</strong>. O identificador será liberado para novos cadastros.`;
 
   modal.innerHTML = `
@@ -112,28 +119,32 @@ function closeDeleteModal() {
 function deleteHistoryItem(slug) {
   openDeleteModal(slug, async () => {
     try {
+      const isAuth = window.authManager && window.authManager.isAuthenticated();
+
       // 1. Exclui do banco de dados na nuvem Supabase
       if (window.supabaseDb && slug) {
         await window.supabaseDb.deleteLink(slug);
       }
 
-      // 2. Zera estatísticas no tracker local
+      // 2. Zera estatísticas no tracker local se presente
       if (window.clickTracker && slug) {
         window.clickTracker.resetLink(slug);
       }
 
-      // 3. Remove do localStorage local
-      let links = getSavedLinks();
-      links = links.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
-      localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
+      // 3. Se for visitante, remove do localStorage
+      if (!isAuth) {
+        let links = getSavedLinks();
+        links = links.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
+        localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
+      }
 
-      // 4. Atualiza a interface e reavalia a disponibilidade na hora
-      renderHistory();
+      // 4. Atualiza a interface
+      await renderHistory();
       checkSlugAvailability();
 
       const alertToast = document.querySelector(".alert-toast");
       const toastMsg = document.querySelector("#toast-msg");
-      if (toastMsg) toastMsg.innerText = `Link "/#/${slug}" excluído com sucesso!`;
+      if (toastMsg) toastMsg.innerText = `Link "/${slug}" excluído com sucesso!`;
       if (alertToast) {
         alertToast.classList.add("visible");
         setTimeout(() => alertToast.classList.remove("visible"), 3000);
@@ -144,16 +155,28 @@ function deleteHistoryItem(slug) {
   });
 }
 
-// Limpa todo o histórico de links salvos com tela de confirmação e libera todos os apelidos
+// Limpa todo o histórico de links com tela de confirmação e libera todos os apelidos
 function clearAllHistory() {
   openDeleteModal(null, async () => {
     try {
-      const links = getSavedLinks();
-      // Exclui todos os links do Supabase
-      if (window.supabaseDb && links.length > 0) {
-        for (const l of links) {
+      const isAuth = window.authManager && window.authManager.isAuthenticated();
+      const authUser = window.authManager ? window.authManager.getUser() : null;
+
+      if (isAuth && window.supabaseDb && authUser) {
+        // Usuário logado: remove seus links do Supabase
+        const remoteLinks = await window.supabaseDb.getUserLinks(authUser.username || authUser.id);
+        for (const l of remoteLinks) {
           if (l.slug) await window.supabaseDb.deleteLink(l.slug);
         }
+      } else {
+        // Visitante: remove links do Supabase e do cache local
+        const links = getSavedLinks();
+        if (window.supabaseDb && links.length > 0) {
+          for (const l of links) {
+            if (l.slug) await window.supabaseDb.deleteLink(l.slug);
+          }
+        }
+        localStorage.removeItem(CRIAR_STORAGE_KEY);
       }
 
       // Zera o tracker de cliques local
@@ -161,8 +184,7 @@ function clearAllHistory() {
         window.clickTracker.clearAll();
       }
 
-      localStorage.removeItem(CRIAR_STORAGE_KEY);
-      renderHistory();
+      await renderHistory();
       checkSlugAvailability();
 
       const alertToast = document.querySelector(".alert-toast");
@@ -195,14 +217,43 @@ function formatDate(isoStr) {
   }
 }
 
-// Renderiza a lista de histórico na interface
-function renderHistory() {
+// Renderiza a lista de histórico na interface (Exclusivo do Supabase para logados, LocalStorage para visitantes)
+async function renderHistory() {
   const listEl = document.querySelector("#history-list");
   const emptyEl = document.querySelector("#history-empty");
   const clearBtn = document.querySelector("#clear-history-btn");
   if (!listEl || !emptyEl) return;
 
-  const links = getSavedLinks();
+  const isAuth = window.authManager && window.authManager.isAuthenticated();
+  const authUser = window.authManager ? window.authManager.getUser() : null;
+  let links = [];
+
+  if (isAuth && window.supabaseDb && authUser) {
+    try {
+      const remoteList = await window.supabaseDb.getUserLinks(authUser.username || authUser.id);
+      if (Array.isArray(remoteList)) {
+        const baseUrl = new URL('../', window.location.href).href;
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+
+        links = remoteList.map(item => {
+          const enc = (item.encrypted_data && typeof item.encrypted_data === "object") ? item.encrypted_data : {};
+          return {
+            slug: item.slug,
+            hint: item.hint || enc.h || "",
+            targetUrl: enc.t || enc.u || `Link Protegido (/${item.slug})`,
+            outputUrl: `${cleanBaseUrl}${encodeURIComponent(item.slug)}`,
+            createdAt: item.created_at || new Date().toISOString()
+          };
+        });
+      }
+    } catch (e) {
+      console.warn("[Criar] Erro ao carregar histórico do Supabase:", e);
+      links = [];
+    }
+  } else {
+    // Visitante: lê exclusivamente do LocalStorage
+    links = getSavedLinks();
+  }
 
   if (links.length === 0) {
     emptyEl.style.display = "block";
@@ -218,7 +269,7 @@ function renderHistory() {
     <div class="history-item">
       <div class="history-info">
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-          <span class="history-slug">/#${escapeHtml(item.slug || 'link')}</span>
+          <span class="history-slug">/${escapeHtml(item.slug || 'link')}</span>
           ${item.hint ? `<span class="badge" style="background: rgba(99,102,241,0.15); color: #a5b4fc; font-size: 0.7rem;">Dica: ${escapeHtml(item.hint)}</span>` : ''}
         </div>
         <span class="history-target" title="${escapeHtml(item.targetUrl)}">Destino: ${escapeHtml(item.targetUrl)}</span>
@@ -241,7 +292,40 @@ function renderHistory() {
   `).join("");
 }
 
+function updateAuthSlugState() {
+  const isAuth = window.authManager && window.authManager.isAuthenticated();
+  const slugInputWrapper = document.querySelector("#slug-input-wrapper");
+  const slugLoginNotice = document.querySelector("#slug-login-notice");
+  const slugStatus = document.querySelector("#slug-status");
+  const customSlugInput = document.querySelector("#custom-slug");
+
+  if (!isAuth) {
+    if (slugInputWrapper) slugInputWrapper.style.display = "none";
+    if (slugLoginNotice) slugLoginNotice.style.display = "block";
+    if (slugStatus) slugStatus.style.display = "none";
+    if (customSlugInput) customSlugInput.value = "";
+  } else {
+    if (slugInputWrapper) slugInputWrapper.style.display = "flex";
+    if (slugLoginNotice) slugLoginNotice.style.display = "none";
+  }
+
+  // Atualiza cabeçalho do histórico de acordo com a sessão
+  const historyTitle = document.querySelector("#history-section .card-title");
+  const historyDesc = document.querySelector("#history-section p");
+  if (historyTitle) {
+    historyTitle.innerHTML = isAuth
+      ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Meus Links Personalizados & Histórico`
+      : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Links Salvos no Navegador (Cache Local)`;
+  }
+  if (historyDesc) {
+    historyDesc.innerText = isAuth
+      ? "Links salvos localmente e sincronizados com sua conta no Painel."
+      : "Links encurtados gerados anonimamente salvos no cache deste navegador para seu acesso rápido.";
+  }
+}
+
 function initHistory() {
+  updateAuthSlugState();
   renderHistory();
 }
 
@@ -503,15 +587,16 @@ async function onEncrypt() {
     const useRandomIv = ivCheckbox ? ivCheckbox.checked : true;
     const useRandomSalt = saltCheckbox ? saltCheckbox.checked : true;
     const hint = document.querySelector("#hint") ? document.querySelector("#hint").value.trim() : "";
-    const rawSlug = document.querySelector("#custom-slug") ? document.querySelector("#custom-slug").value.trim() : "";
-    let customSlug = normalizeSlug(rawSlug);
+    const isAuth = window.authManager && window.authManager.isAuthenticated();
+    const rawSlug = isAuth && document.querySelector("#custom-slug") ? document.querySelector("#custom-slug").value.trim() : "";
+    let customSlug = isAuth ? normalizeSlug(rawSlug) : "";
 
     const existingSlugs = await getAllExistingSlugs();
 
-    // Se o usuário digitou um apelido, garante que ele não existe no sistema global/local
-    if (customSlug) {
+    // Se o usuário está logado e digitou um apelido, garante que ele não existe no sistema global/local
+    if (isAuth && customSlug) {
       if (existingSlugs.has(customSlug.toLowerCase())) {
-        alert(`O apelido "/#/${customSlug}" já está em uso por outro link no sistema. Por favor, escolha um nome diferente.`);
+        alert(`O apelido "/${customSlug}" já está em uso por outro link no sistema. Por favor, escolha um nome diferente.`);
         const slugInput = document.querySelector("#custom-slug");
         if (slugInput) slugInput.focus();
         if (encryptBtn) {
@@ -521,18 +606,19 @@ async function onEncrypt() {
         return;
       }
     } else {
-      // Se não digitou, gera automaticamente o código único de 5 dígitos sem repetição
+      // Se não está logado ou não digitou, gera automaticamente o código único de 5 dígitos sem repetição
       customSlug = await generateUniqueSlug();
     }
 
     const encrypted = await generateFragment(url, passwordInput ? passwordInput.value : "", hint, useRandomSalt, useRandomIv);
     
-    // Constrói a URL de forma dinâmica considerando o domínio e caminho atual
+    // Constrói a URL limpa de forma dinâmica considerando o domínio e caminho atual
     const baseUrl = new URL('../', window.location.href).href;
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
     
-    const shortUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}`;
-    const autonomousUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}@${encrypted}`;
-    const outputUrl = shortUrl; // Link curto e limpo no formato /#/slug
+    const outputUrl = `${cleanBaseUrl}${encodeURIComponent(customSlug)}`;
+    const shortUrl = outputUrl;
+    const autonomousUrl = `${cleanBaseUrl}#/${encodeURIComponent(customSlug)}@${encrypted}`;
     const rawHash = customSlug;
 
     const outputField = document.querySelector("#output");
@@ -545,23 +631,30 @@ async function onEncrypt() {
       parsedEncrypted = JSON.parse(b64.decode(encrypted));
     } catch {}
     
-    // Salva no Supabase Nuvem (visível e ativo para qualquer pessoa no planeta em 50ms)
+    const authUser = window.authManager ? window.authManager.getUser() : null;
+    const authorType = isAuth && authUser ? "github" : "visitante";
+    const authorUsername = isAuth && authUser ? (authUser.username || "").toLowerCase() : "visitante";
+    const authorId = isAuth && authUser ? (authUser.id || `github_${authUser.username}`) : `guest_${Math.random().toString(36).substring(2)}`;
+    const authorName = isAuth && authUser ? (authUser.username ? `@${authUser.username}` : (authUser.name || "GitHub")) : "Visitante (Anônimo)";
+    const authorAvatar = isAuth && authUser ? (authUser.avatar || "") : "";
+
+    // Salva no Supabase Nuvem com vinculação à conta criadora (Multi-Dispositivo)
     if (window.supabaseDb && customSlug) {
       try {
         await window.supabaseDb.saveLink({
           slug: customSlug,
           encryptedData: parsedEncrypted,
           hint: hint,
-          targetUrl: url
+          targetUrl: url,
+          authorType: authorType,
+          authorUsername: authorUsername,
+          authorId: authorId,
+          authorName: authorName,
+          authorAvatar: authorAvatar
         });
       } catch (e) {
         console.warn("[Supabase] Erro ao salvar na nuvem:", e);
       }
-    }
-
-    // Zera qualquer estatística anterior no tracker local para este apelido recriado
-    if (window.clickTracker && customSlug) {
-      window.clickTracker.resetLink(customSlug);
     }
 
     // Salva no histórico de links personalizados se houver apelido ou link criado
@@ -574,6 +667,11 @@ async function onEncrypt() {
         targetUrl: url,
         hint: hint,
         encryptedData: parsedEncrypted,
+        authorType: authorType,
+        authorUsername: authorUsername,
+        authorId: authorId,
+        authorName: authorName,
+        authorAvatar: authorAvatar,
         clicks: 0,
         createdAt: new Date().toISOString()
       });

@@ -5,8 +5,23 @@
 
 let allLinks = [];
 let filteredLinks = [];
+window.allLinks = allLinks;
+window.filteredLinks = filteredLinks;
 
 function initDashboard() {
+  const isAuth = window.authManager && window.authManager.isAuthenticated();
+  const restrictedCard = document.querySelector("#access-restricted-card");
+  const dashboardContent = document.querySelector("#dashboard-content");
+
+  if (!isAuth) {
+    if (restrictedCard) restrictedCard.style.display = "block";
+    if (dashboardContent) dashboardContent.style.display = "none";
+    return;
+  }
+
+  if (restrictedCard) restrictedCard.style.display = "none";
+  if (dashboardContent) dashboardContent.style.display = "block";
+
   updateSessionInfo();
   loadDashboardData();
 }
@@ -18,75 +33,95 @@ function updateSessionInfo() {
   const dashboardSubtitle = document.querySelector("#dashboard-subtitle");
 
   if (user) {
-    sessionBadge.className = `badge provider-badge ${user.provider}`;
-    sessionBadge.innerText = `Conectado via ${user.providerName} (@${user.username || user.name})`;
+    if (sessionBadge) {
+      sessionBadge.className = `badge provider-badge ${user.provider || 'github'}`;
+      sessionBadge.innerText = `Conectado via ${user.providerName || 'GitHub'} (@${user.username || user.name})`;
+    }
     const nameDisplay = user.name && user.name !== user.username ? `${user.name} (@${user.username})` : `@${user.username || user.name}`;
-    dashboardTitle.innerText = `Olá, ${nameDisplay}!`;
-    dashboardSubtitle.innerText = `Gerencie seus links sincronizados e acompanhe suas estatísticas de cliques.`;
-  } else {
-    sessionBadge.className = "badge badge-info";
-    sessionBadge.innerText = "Modo Convidado (Armazenamento Local)";
-    dashboardTitle.innerText = "Painel de Gerenciamento";
-    dashboardSubtitle.innerText = "Acompanhe cliques, gerencie apelidos e controle seus links protegidos.";
+    if (dashboardTitle) dashboardTitle.innerText = `Olá, ${nameDisplay}!`;
+    if (dashboardSubtitle) dashboardSubtitle.innerText = `Exibindo os links vinculados exclusivamente à sua conta @${user.username || user.name} e sincronizados na nuvem.`;
   }
 }
 
 async function loadDashboardData() {
-  try {
-    const raw = localStorage.getItem("linklock_saved_custom_links");
-    allLinks = raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    console.error("Erro ao carregar links:", e);
+  const user = window.authManager ? window.authManager.getUser() : null;
+  const userIdentifier = user ? (user.username || user.name || user.id) : null;
+  const tbody = document.querySelector("#dashboard-tbody");
+  const noLinksMsg = document.querySelector("#no-links-msg");
+
+  if (!window.supabaseDb || !userIdentifier) {
     allLinks = [];
+    renderStats();
+    filterLinks();
+    return;
   }
 
-  // Preenche dados de cliques usando o tracker
-  allLinks.forEach(link => {
-    const slugKey = (link.slug || "").toLowerCase();
-    const stats = window.clickTracker ? window.clickTracker.getLinkStats(slugKey) : { total: 0 };
-    link.clicks = stats.total || link.clicks || 0;
-  });
+  // Exibe estado de carregamento inicial enquanto consulta o banco de dados
+  if (tbody && allLinks.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+          <div style="display: inline-block; width: 26px; height: 26px; border: 2px solid rgba(56, 189, 248, 0.2); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 0.65rem;"></div>
+          <p style="font-size: 0.88rem; margin: 0; color: var(--text-secondary);">Consultando dados do banco de dados na nuvem...</p>
+        </td>
+      </tr>
+    `;
+    if (noLinksMsg) noLinksMsg.style.display = "none";
+  }
 
-  renderStats();
-  filterLinks();
+  try {
+    // Carrega dados EXCLUSIVAMENTE do banco de dados Supabase para a conta conectada
+    const remoteList = await window.supabaseDb.getUserLinks(userIdentifier);
 
-  // Sincroniza contadores de cliques em tempo real direto do Supabase Nuvem
-  if (window.supabaseDb && allLinks.length > 0) {
-    try {
-      let changed = false;
-      for (const link of allLinks) {
-        if (link.slug) {
-          const remote = await window.supabaseDb.getLink(link.slug);
-          if (remote && remote.clicks !== undefined) {
-            const remoteClicks = Number(remote.clicks) || 0;
-            if (link.clicks !== remoteClicks) {
-              link.clicks = remoteClicks;
-              changed = true;
-              // Sincroniza também o tracker local com o valor real
-              if (window.clickTracker) {
-                if (remoteClicks === 0) {
-                  window.clickTracker.resetLink(link.slug);
-                } else {
-                  const k = link.slug.toLowerCase();
-                  if (!window.clickTracker.clicks[k]) window.clickTracker.clicks[k] = { total: 0, history: [] };
-                  window.clickTracker.clicks[k].total = remoteClicks;
-                  window.clickTracker.saveClicks();
-                }
-              }
-            }
-          }
-        }
-      }
-      if (changed) {
-        localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
-        renderStats();
-        filterLinks();
-      }
-    } catch (e) {
-      console.warn("[Supabase] Erro ao sincronizar cliques com o painel:", e);
+    if (Array.isArray(remoteList)) {
+      const baseUrl = new URL('../', window.location.href).href;
+      const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+      
+      allLinks = remoteList.map(remote => {
+        const enc = (remote.encrypted_data && typeof remote.encrypted_data === "object") ? remote.encrypted_data : {};
+        const remoteClicks = Number(remote.clicks) || 0;
+        const outputUrl = `${cleanBaseUrl}${encodeURIComponent(remote.slug)}`;
+        
+        // Identifica o criador vinculado à conta no banco
+        let authorType = remote.author_type || enc.author_type || "github";
+        let authorUsername = remote.author_username || enc.author_username || (user ? user.username : "github");
+        let authorName = remote.author_name || enc.author_name || (authorType === "github" ? `@${authorUsername}` : "Visitante");
+
+        return {
+          slug: remote.slug,
+          outputUrl: outputUrl,
+          shortUrl: outputUrl,
+          autonomousUrl: `${cleanBaseUrl}#/${encodeURIComponent(remote.slug)}`,
+          targetUrl: enc.t || enc.u || `Link Protegido (/${remote.slug})`,
+          hint: remote.hint || enc.h || "",
+          encryptedData: enc,
+          clicks: remoteClicks, // 100% exclusivo do banco de dados
+          authorType: authorType,
+          authorUsername: authorUsername,
+          authorName: authorName,
+          createdAt: remote.created_at || new Date().toISOString()
+        };
+      });
+    } else {
+      allLinks = [];
     }
+
+    window.allLinks = allLinks;
+    renderStats();
+    filterLinks();
+  } catch (e) {
+    console.error("[Supabase] Erro ao carregar dados exclusivos do banco:", e);
+    allLinks = [];
+    window.allLinks = allLinks;
+    renderStats();
+    filterLinks();
   }
 }
+
+window.loadDashboardData = loadDashboardData;
+window.initDashboard = initDashboard;
+window.deleteLink = deleteLink;
+window.saveEditedLink = saveEditedLink;
 
 function renderStats() {
   const totalLinks = allLinks.length;
@@ -119,7 +154,8 @@ function filterLinks() {
     const slug = (link.slug || "").toLowerCase();
     const target = (link.targetUrl || "").toLowerCase();
     const hint = (link.hint || "").toLowerCase();
-    return slug.includes(query) || target.includes(query) || hint.includes(query);
+    const author = (link.authorName || "").toLowerCase();
+    return slug.includes(query) || target.includes(query) || hint.includes(query) || author.includes(query);
   });
 
   // Ordenação
@@ -158,6 +194,8 @@ function renderLinksTable() {
     const slug = link.slug || "sem-apelido";
     const targetUrl = link.targetUrl || link.outputUrl || "";
     const clicks = link.clicks || 0;
+    const isGithub = link.authorType === "github";
+    const authorDisplay = link.authorName || (isGithub ? "GitHub" : "Visitante");
     const dateFormatted = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recente";
 
     html += `
@@ -172,12 +210,25 @@ function renderLinksTable() {
           </div>
         </td>
         <td>
-          <span style="max-width: 260px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; color: var(--text-secondary);" title="${escapeHtml(targetUrl)}">
+          <span style="max-width: 240px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; color: var(--text-secondary);" title="${escapeHtml(targetUrl)}">
             ${escapeHtml(targetUrl)}
           </span>
         </td>
         <td>
-          <span class="clicks-badge">
+          ${isGithub ? `
+            <span class="badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); font-size: 0.75rem; padding: 0.2rem 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              ${escapeHtml(authorDisplay)}
+            </span>
+          ` : `
+            <span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); font-size: 0.75rem; padding: 0.2rem 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Visitante
+            </span>
+          `}
+        </td>
+        <td>
+          <span class="clicks-badge" title="Cliques contabilizados diretamente no banco de dados Supabase">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             ${clicks}
           </span>
@@ -250,10 +301,10 @@ function checkEditSlugAvailability() {
   }
 }
 
-function saveEditedLink(e) {
+async function saveEditedLink(e) {
   e.preventDefault();
   const originalSlug = document.querySelector("#edit-original-slug").value;
-  const newSlug = document.querySelector("#edit-slug").value.trim();
+  const newSlug = document.querySelector("#edit-slug").value.trim().toLowerCase();
   const newTargetUrl = document.querySelector("#edit-target-url").value.trim();
   const newHint = document.querySelector("#edit-hint").value.trim();
 
@@ -269,31 +320,48 @@ function saveEditedLink(e) {
     return;
   }
 
-  const index = allLinks.findIndex(l => (l.slug || "").toLowerCase() === originalSlug.toLowerCase());
-  if (index === -1) return;
+  const link = allLinks.find(l => (l.slug || "").toLowerCase() === originalSlug.toLowerCase());
+  if (!link) return;
 
-  // Atualiza os dados
-  allLinks[index].slug = newSlug;
-  allLinks[index].targetUrl = newTargetUrl;
-  allLinks[index].hint = newHint;
+  if (window.supabaseDb) {
+    try {
+      const enc = (link.encryptedData && typeof link.encryptedData === "object") ? link.encryptedData : {};
+      enc.t = newTargetUrl;
+      enc.u = newTargetUrl;
+      enc.h = newHint;
 
-  // Atualiza o fragmento no outputUrl se houver
-  if (allLinks[index].outputUrl) {
-    let url = allLinks[index].outputUrl;
-    if (url.includes("#")) {
-      const parts = url.split("#");
-      const hash = parts[1];
-      if (hash.includes("@")) {
-        const payload = hash.slice(hash.indexOf("@") + 1);
-        allLinks[index].outputUrl = `${parts[0]}#${encodeURIComponent(newSlug)}@${payload}`;
+      if (newSlug !== originalSlug.toLowerCase()) {
+        // Se mudou o apelido, recria com o novo slug no Supabase e remove o antigo
+        await window.supabaseDb.deleteLink(originalSlug);
+        await window.supabaseDb.saveLink({
+          slug: newSlug,
+          encryptedData: enc,
+          hint: newHint,
+          targetUrl: newTargetUrl,
+          authorType: link.authorType,
+          authorUsername: link.authorUsername,
+          authorName: link.authorName
+        });
+      } else {
+        // Atualiza os dados no banco Supabase
+        const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(originalSlug)}`;
+        await fetch(endpoint, {
+          method: "PATCH",
+          headers: window.supabaseDb.getHeaders(),
+          body: JSON.stringify({
+            encrypted_data: enc,
+            hint: newHint || null
+          })
+        });
       }
+    } catch (err) {
+      console.error("[Supabase] Erro ao editar link no banco:", err);
     }
   }
 
-  localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
   closeEditModal();
-  showToast("Link atualizado com sucesso!");
-  loadDashboardData();
+  showToast("Link atualizado no banco de dados com sucesso!");
+  await loadDashboardData();
 }
 
 // Ações de Links
@@ -323,7 +391,7 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
   }
 
   const title = customTitle || "Confirmar Exclusão Permanente";
-  const targetText = slug ? `/#/${slug}` : "Link selecionado";
+  const targetText = slug ? `/${slug}` : "Link selecionado";
   const msg = customMsg || `Atenção: Este link será <strong>excluído permanentemente</strong> do seu painel e <strong>não poderá ser recuperado</strong>. O identificador será liberado para novos cadastros.`;
 
   modal.innerHTML = `
@@ -393,17 +461,14 @@ function deleteLink(slug) {
         await window.supabaseDb.deleteLink(slug);
       }
 
-      // 2. Remove do localStorage local e zera estatísticas do tracker
+      // 2. Limpa tracker local caso exista
       if (window.clickTracker && slug) {
         window.clickTracker.resetLink(slug);
       }
-      allLinks = allLinks.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
-      localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
 
-      // 3. Atualiza interface e estatísticas instantaneamente sem recarregar a página
-      renderStats();
-      filterLinks();
-      showToast(`Link "/#/${slug}" excluído com sucesso.`);
+      // 3. Recarrega as informações exclusivamente do banco de dados na nuvem
+      showToast(`Link "/${slug}" excluído permanentemente do banco de dados.`);
+      await loadDashboardData();
     } catch (e) {
       console.error("Erro ao excluir link no painel:", e);
     }

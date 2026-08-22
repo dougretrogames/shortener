@@ -13,13 +13,13 @@
   <title>Encurtador de Links - Teste de Força Bruta</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=17.0" type="text/css" />
 
-  <script type="text/javascript" src="../b64.js?v=5.0"></script>
-  <script type="text/javascript" src="../api.js?v=5.0"></script>
-  <script type="text/javascript" src="../auth.js?v=5.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=5.0"></script>
-  <script type="text/javascript" src="forca-bruta.js?v=5.0"></script>
+  <script type="text/javascript" src="../b64.js?v=17.0"></script>
+  <script type="text/javascript" src="../api.js?v=17.0"></script>
+  <script type="text/javascript" src="../auth.js?v=17.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=17.0"></script>
+  <script type="text/javascript" src="forca-bruta.js?v=17.0"></script>
 </head>
 
 <body>
@@ -33,10 +33,22 @@
         </svg>
         <span>Encurtador de Links</span>
       </a>
+
+      <div class="header-right-actions">
+        <div id="auth-header-slot" class="auth-slot"></div>
+        <button type="button" class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
       <nav>
         <ul class="nav-links">
           <li><a href="../criar" class="nav-link">Criar Link</a></li>
-          <li><a href="../painel" class="nav-link">Painel</a></li>
+          <li class="nav-painel-item"><a href="../painel" class="nav-link">Painel</a></li>
           <li><a href="../descriptografar" class="nav-link">Descriptografar</a></li>
           <li><a href="../favoritos-ocultos" class="nav-link">Favoritos Ocultos</a></li>
           <li><a href="../forca-bruta" class="nav-link active">Força Bruta</a></li>
@@ -48,7 +60,6 @@
               Veja no GitHub
             </a>
           </li>
-          <li id="auth-header-slot"></li>
         </ul>
       </nav>
     </div>

@@ -13,19 +13,19 @@
   <title>Encurtador de Links - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=17.0" type="text/css" />
 
-  <script type="text/javascript" src="../b64.js?v=11.0"></script>
-  <script type="text/javascript" src="../api.js?v=11.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=11.0"></script>
-  <script type="text/javascript" src="../auth.js?v=11.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=11.0"></script>
-  <script type="text/javascript" src="painel.js?v=11.0"></script>
+  <script type="text/javascript" src="../b64.js?v=17.0"></script>
+  <script type="text/javascript" src="../api.js?v=17.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=17.0"></script>
+  <script type="text/javascript" src="../auth.js?v=17.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=17.0"></script>
+  <script type="text/javascript" src="painel.js?v=17.0"></script>
 </head>
 
 <body onload="initDashboard()">
   <!-- Cabeçalho & Navegação -->
-  <header class="site-header">
+  <header class="site-header" id="site-header">
     <div class="header-container">
       <a href="../criar" class="brand">
         <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -34,10 +34,22 @@
         </svg>
         <span>Encurtador de Links</span>
       </a>
+
+      <div class="header-right-actions">
+        <div id="auth-header-slot" class="auth-slot"></div>
+        <button type="button" class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu" aria-expanded="false">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
       <nav>
         <ul class="nav-links">
           <li><a href="../criar" class="nav-link">Criar Link</a></li>
-          <li><a href="../painel" class="nav-link active">Painel</a></li>
+          <li class="nav-painel-item"><a href="../painel" class="nav-link active">Painel</a></li>
           <li><a href="../descriptografar" class="nav-link">Descriptografar</a></li>
           <li><a href="../favoritos-ocultos" class="nav-link">Favoritos Ocultos</a></li>
           <li><a href="../forca-bruta" class="nav-link">Força Bruta</a></li>
@@ -49,7 +61,6 @@
               Veja no GitHub
             </a>
           </li>
-          <li id="auth-header-slot"></li>
         </ul>
       </nav>
     </div>
@@ -64,8 +75,41 @@
       </div>
     </noscript>
 
-    <!-- Banner de Boas-Vindas / Status de Sessão -->
-    <section class="page-header" style="text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <!-- Cartão de Acesso Restrito (Exibido para visitantes deslogados) -->
+    <div id="access-restricted-card" class="card" style="display: none; text-align: center; padding: 2.75rem 1.5rem; max-width: 520px; margin: 2.5rem auto;">
+      <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--danger-bg); border: 1px solid var(--danger-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem auto; color: var(--danger);">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      
+      <div style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: var(--radius-full); background: var(--danger-bg); color: #f87171; border: 1px solid var(--danger-border); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+        🔒 Acesso Restrito
+      </div>
+
+      <h2 style="font-size: 1.45rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">Acesso Restrito ao Painel</h2>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.6; margin-bottom: 1.75rem;">
+        Somente usuários conectados têm acesso ao Painel de Controle para gerenciar seus links personalizados, acompanhar cliques em tempo real e editar apelidos.
+      </p>
+
+      <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <a href="../criar" class="btn btn-secondary" style="flex: 1; min-width: 140px; justify-content: center;">
+          Voltar para o Início
+        </a>
+        <button type="button" class="btn btn-github" onclick="openLoginModal()" style="flex: 1.2; min-width: 160px; justify-content: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>Entrar com GitHub</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Conteúdo Principal do Dashboard (Exibido apenas para usuários autenticados) -->
+    <div id="dashboard-content">
+      <!-- Banner de Boas-Vindas / Status de Sessão -->
+      <section class="page-header" style="text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
       <div>
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
           <span class="badge badge-info" id="session-badge">Modo Convidado (Local)</span>
@@ -149,7 +193,8 @@
             <tr>
               <th>Apelido / Link</th>
               <th>Destino Original</th>
-              <th>Cliques</th>
+              <th>Criador</th>
+              <th>Cliques (Nuvem)</th>
               <th>Data de Criação</th>
               <th style="text-align: right;">Ações</th>
             </tr>
@@ -166,6 +211,7 @@
         <a href="../criar" class="btn btn-primary btn-sm">Criar Primeiro Link</a>
       </div>
     </div>
+  </div>
   </main>
 
   <!-- Modal de Edição de Link -->
@@ -182,7 +228,7 @@
         <div class="form-group labeled-input">
           <label for="edit-slug">Apelido Personalizado (Slug)</label>
           <div class="slug-input-group">
-            <span class="slug-prefix">/#</span>
+            <span class="slug-prefix">/</span>
             <input type="text" id="edit-slug" placeholder="novo-apelido" oninput="checkEditSlugAvailability()" required />
           </div>
           <div id="edit-slug-status" class="slug-status" style="display: none;"></div>

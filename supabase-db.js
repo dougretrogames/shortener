@@ -40,10 +40,77 @@ const supabaseDb = {
     return null;
   },
 
-  // Salva um novo link no Supabase
-  async saveLink({ slug, encryptedData, hint, targetUrl }) {
+  // Busca todos os links cadastrados no Supabase para sincronização geral
+  async getAllLinks() {
+    try {
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?select=*&order=created_at.desc`;
+      const res = await fetch(endpoint, {
+        method: "GET",
+        headers: this.getHeaders()
+      });
+
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.warn("[Supabase] Falha ao listar todos os links:", e);
+      return [];
+    }
+  },
+
+  // Busca apenas os links vinculados a uma conta específica de usuário no Supabase
+  async getUserLinks(usernameOrId) {
+    if (!usernameOrId) return [];
+    const cleanUser = String(usernameOrId).trim().toLowerCase().replace(/^@/, '');
+    
+    try {
+      // Consulta direta pelo campo JSONB author_username no PostgreSQL do Supabase
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?encrypted_data->>author_username=eq.${encodeURIComponent(cleanUser)}&select=*&order=created_at.desc`;
+      const res = await fetch(endpoint, {
+        method: "GET",
+        headers: this.getHeaders()
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn("[Supabase] Consulta direta por usuário falhou, tentando fallback:", e);
+    }
+
+    // Fallback inteligente: obtém os links e filtra pela conta do criador
+    try {
+      const all = await this.getAllLinks();
+      return all.filter(item => {
+        const enc = (item.encrypted_data && typeof item.encrypted_data === "object") ? item.encrypted_data : {};
+        const encUser = (enc.author_username || "").toLowerCase();
+        const encId = enc.author_id || "";
+        
+        return encUser === cleanUser || encId === cleanUser || (cleanUser === "dougretrogames" && (!encUser || encUser === "dougretrogames"));
+      });
+    } catch (e) {
+      console.warn("[Supabase] Falha no fallback de links do usuário:", e);
+      return [];
+    }
+  },
+
+  // Salva um novo link no Supabase com identificação e vinculação definitiva da conta
+  async saveLink({ slug, encryptedData, hint, targetUrl, authorType, authorUsername, authorId, authorName, authorAvatar }) {
     if (!slug || !encryptedData) return false;
     const cleanSlug = String(slug).trim().toLowerCase();
+    
+    // Injeta os dados definitivos da conta criadora dentro de encrypted_data (JSONB)
+    if (typeof encryptedData === "object" && encryptedData !== null) {
+      encryptedData.author_type = authorType || "visitante";
+      encryptedData.author_username = (authorUsername || (authorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
+      encryptedData.author_id = authorId || ("user_" + Math.random().toString(36).substring(2));
+      encryptedData.author_name = authorName || (authorType === "github" ? "GitHub" : "Visitante");
+      if (authorAvatar) encryptedData.author_avatar = authorAvatar;
+    }
+
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
       const payload = {
@@ -66,6 +133,45 @@ const supabaseDb = {
       return res.ok || res.status === 201 || res.status === 204;
     } catch (e) {
       console.error("[Supabase] Falha ao salvar link:", e);
+      return false;
+    }
+  },
+
+  // Atualiza os dados de autoria/vinculação de um link (usado para migrar links de visitante para usuário conectado)
+  async updateLinkAuthor(slug, { authorType, authorUsername, authorId, authorName, authorAvatar }) {
+    if (!slug) return false;
+    const cleanSlug = String(slug).trim().toLowerCase();
+
+    try {
+      const linkRecord = await this.getLink(cleanSlug);
+      if (!linkRecord) return false;
+
+      const enc = (linkRecord.encrypted_data && typeof linkRecord.encrypted_data === "object")
+        ? linkRecord.encrypted_data
+        : {};
+
+      enc.author_type = authorType || "github";
+      enc.author_username = (authorUsername || "github").toLowerCase().replace(/^@/, '');
+      enc.author_id = authorId || `github_${enc.author_username}`;
+      enc.author_name = authorName || `@${enc.author_username}`;
+      if (authorAvatar) enc.author_avatar = authorAvatar;
+
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
+      const res = await fetch(endpoint, {
+        method: "PATCH",
+        headers: {
+          ...this.getHeaders(),
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({
+          encrypted_data: enc
+        })
+      });
+
+      return res.ok;
+    } catch (e) {
+      console.error(`[Supabase] Erro ao atualizar autor do slug /${cleanSlug}:`, e);
       return false;
     }
   },
@@ -111,23 +217,32 @@ const supabaseDb = {
     }
   },
 
-  // Incrementa contador de cliques no Supabase
+  // Incrementa contador de cliques no Supabase em tempo real
   async incrementClicks(slug) {
-    if (!slug) return;
+    if (!slug) return 0;
     const cleanSlug = String(slug).trim().toLowerCase();
     try {
       const link = await this.getLink(cleanSlug);
-      if (!link) return;
+      if (!link) return 0;
 
       const newClicks = (Number(link.clicks) || 0) + 1;
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
-      await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: "PATCH",
-        headers: this.getHeaders(),
+        headers: {
+          ...this.getHeaders(),
+          "Prefer": "return=representation"
+        },
         body: JSON.stringify({ clicks: newClicks })
       });
+
+      if (res.ok) {
+        console.log(`[Supabase] Clique atualizado com sucesso para /${cleanSlug}: ${newClicks} cliques`);
+      }
+      return newClicks;
     } catch (e) {
       console.warn("[Supabase] Falha ao incrementar cliques:", e);
+      return 0;
     }
   }
 };

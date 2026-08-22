@@ -1,29 +1,45 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
+  <!-- Metadados -->
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Página não encontrada - Encurtador de Links</title>
-  <link rel="stylesheet" href="./style.css" type="text/css" />
+  <meta name="author" content="DougRetroGames / Encurtador de Links" />
+  <meta name="description" content="Proteja e encurte links com senha usando criptografia AES no navegador." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
   <script>
-    // Se a rota for /painel, /criar, /descriptografar etc., redireciona para a pasta correta
-    const path = window.location.pathname;
-    if (path.endsWith("/painel")) {
-      window.location.replace(path + "/");
-    } else if (path.endsWith("/criar")) {
-      window.location.replace(path + "/");
-    } else if (path.endsWith("/descriptografar")) {
-      window.location.replace(path + "/");
-    } else if (path.endsWith("/favoritos-ocultos")) {
-      window.location.replace(path + "/");
-    } else if (path.endsWith("/forca-bruta")) {
-      window.location.replace(path + "/");
-    }
+    // Configura o Base Path dinamicamente para carregar estilos e scripts corretamente em qualquer subdiretório
+    (function() {
+      var p = window.location.pathname || '';
+      var base = '/';
+      if (p.indexOf('/encurtador/') === 0) {
+        base = '/encurtador/';
+      }
+      var baseEl = document.createElement('base');
+      baseEl.href = base;
+      document.head.appendChild(baseEl);
+    })();
   </script>
+
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+  <title>Encurtador de Links - Desbloquear Link Protegido</title>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="style.css?v=17.0" type="text/css" />
+
+  <script type="text/javascript" src="b64.js?v=17.0"></script>
+  <script type="text/javascript" src="api.js?v=17.0"></script>
+  <script type="text/javascript" src="supabase-db.js?v=17.0"></script>
+  <script type="text/javascript" src="auth.js?v=17.0"></script>
+  <script type="text/javascript" src="tracker.js?v=17.0"></script>
+  <script type="text/javascript" src="index.js?v=17.0"></script>
 </head>
-<body>
-  <header class="site-header">
-    <div class="header-container">
+
+<body onload="main()">
+  <!-- Cabeçalho Limpo / Minimalista -->
+  <header class="site-header site-header-clean">
+    <div class="header-container header-container-centered">
       <a href="./criar" class="brand">
         <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -31,26 +47,131 @@
         </svg>
         <span>Encurtador de Links</span>
       </a>
-      <nav>
-        <ul class="nav-links">
-          <li><a href="./criar" class="nav-link">Criar Link</a></li>
-          <li><a href="./painel" class="nav-link">Painel</a></li>
-        </ul>
-      </nav>
     </div>
   </header>
 
-  <main class="main-content" style="text-align: center; padding: 4rem 1rem;">
-    <div class="card" style="max-width: 500px; margin: 0 auto;">
-      <h1 style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 0.5rem;">404</h1>
-      <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">Página não encontrada</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">O endereço acessado não existe ou foi movido.</p>
-      <a href="./criar" class="btn btn-primary">Voltar para a Página Inicial</a>
+  <main class="main-content">
+    <!-- Aviso para navegadores sem JavaScript -->
+    <noscript>
+      <div class="noscript-warning">
+        <h3>JavaScript Desativado</h3>
+        <p>Você precisa ativar o JavaScript no seu navegador para acessar este link bloqueado.</p>
+        <p>O Encurtador de Links executa toda a criptografia e descriptografia diretamente no seu dispositivo por questões de segurança e privacidade. Nenhum dado do seu link é enviado ou armazenado em servidores externos.</p>
+      </div>
+    </noscript>
+
+    <!-- Formulário de Desbloqueio -->
+    <div class="card form" style="display: none">
+      <div class="page-header" style="margin-bottom: 1.5rem;">
+        <div style="display: inline-flex; padding: 0.85rem; background: rgba(56, 189, 248, 0.1); border-radius: var(--radius-full); margin-bottom: 0.75rem; color: var(--accent-primary);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        
+        <!-- Apelido do link personalizado se presente -->
+        <div id="custom-slug-container" style="display: none; margin-bottom: 0.5rem;">
+          <span class="badge badge-info" id="custom-slug-badge" style="font-size: 0.85rem; padding: 0.35rem 0.8rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span id="custom-slug-text"></span>
+          </span>
+        </div>
+
+        <h1>Link Protegido</h1>
+        <p>Digite a senha para descriptografar e acessar o link de destino.</p>
+      </div>
+
+      <!-- Dica de senha -->
+      <div id="hint-container" style="display: none;">
+        <div class="hint-badge">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span id="hint"></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha de Acesso</label>
+        <div class="input-wrapper">
+          <input type="password" id="password" class="has-toggle" placeholder="Digite a senha..." autofocus />
+          <button type="button" class="input-icon-btn" onclick="togglePasswordVisibility('password', this)" title="Alternar visibilidade da senha" aria-label="Alternar visibilidade da senha">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button id="unlockbutton" class="btn btn-primary btn-block">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+        </svg>
+        Desbloquear Link
+      </button>
+    </div>
+
+    <!-- Exibição de Erros -->
+    <div class="error-banner error" style="display: none">
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        Não foi possível desbloquear
+      </h3>
+      <p id="errortext">Erro</p>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="main()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 4v6h-6"></path>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Tentar novamente
+        </button>
+        <a href="./criar" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14"></path>
+            <path d="M5 12h14"></path>
+          </svg>
+          Criar um link
+        </a>
+        <a href="./descriptografar" id="no-redirect" class="btn btn-secondary" target="_blank">
+          Descriptografar sem redirecionar
+        </a>
+        <a href="./favoritos-ocultos" id="hidden" class="btn btn-secondary" target="_blank">
+          Criar favorito oculto
+        </a>
+      </div>
     </div>
   </main>
 
+  <!-- Rodapé -->
   <footer>
-    <p>Encurtador de Links &bull; Criado por <a href="https://github.com/dougretrogames" target="_blank" rel="noopener noreferrer"><strong>Doug Retro Games</strong></a></p>
+    <p>Encurtador de Links &bull; Criado por <a href="https://github.com/dougretrogames" target="_blank" rel="noopener noreferrer"><strong>Doug Retro Games</strong></a> &bull; <a href="https://github.com/dougretrogames/encurtador" target="_blank" rel="noopener noreferrer">Veja no GitHub</a></p>
   </footer>
+
+  <script>
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+      } else {
+        input.type = 'password';
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      }
+    }
+  </script>
 </body>
+
 </html>

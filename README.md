@@ -2,7 +2,7 @@
 
 > **Proteja e encurte URLs com senha usando criptografia AES-256 de padrão militar diretamente no navegador.**
 
-Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos limpos (`/#/apelido` ou `/#/5digitos`)**, **banco de dados em nuvem Supabase em tempo real**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
+Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos 100% limpos (`/apelido` ou `/5digitos`)**, **banco de dados em nuvem Supabase em tempo real**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
 
 [👉 Acesse o Repositório no GitHub](https://github.com/dougretrogames/encurtador) | [🚀 Teste a Aplicação Online](https://dougretrogames.github.io/encurtador/criar/)
 
@@ -15,10 +15,10 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 - Emprega **AES-256-GCM** para proteção de dados e **PBKDF2** com **100.000 iterações** de **SHA-256** para derivação segura de chaves a partir da senha digitada.
 - Suporte a **Vetor de Inicialização (IV) aleatório de 96 bits** e **Salt criptográfico de 128 bits** para proteção contra tabelas rainbow e ataques de dicionário.
 
-### 2. 🔗 Links Curtos e Limpos no Padrão SPA (`/#/apelido` e `/#/5digitos`)
-- **Links Ultra-Curtos:** URLs limpas e fáceis de compartilhar:
-  - Com apelido personalizado: `https://dougretrogames.github.io/encurtador/#/retrogamebox-vip`
-  - Automático com 5 dígitos: `https://dougretrogames.github.io/encurtador/#/6x8qt`
+### 2. 🔗 Links Curtos 100% Limpos e Elegantes (`/apelido` e `/5digitos`)
+- **URLs Ultra-Curtas (Sem `#`):** Links limpos e profissionais:
+  - Com apelido personalizado: `https://dougretrogames.github.io/encurtador/retrogamebox-vip`
+  - Automático com 5 dígitos: `https://dougretrogames.github.io/encurtador/6x8qt`
 - **Zero Exposição de Chave:** A chave criptografada não fica visível na barra de endereços do link compartilhado.
 
 ### 3. 🎲 Gerador Automático de Códigos de 5 Dígitos
@@ -69,7 +69,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 4. *(Opcional)* Insira uma **Dica de Senha**.
 5. Digite e confirme a **Senha de Proteção** (opcional caso queira apenas encurtar).
 6. Clique em **"Criptografar e Gerar Link"**.
-7. Copie o link curto gerado (ex: `https://dougretrogames.github.io/encurtador/#/retrogamebox-vip` ou `/#/6x8qt`).
+7. Copie o link curto gerado (ex: `https://dougretrogames.github.io/encurtador/retrogamebox-vip` ou `/6x8qt`).
 
 ### 2. Desbloqueando um Link
 1. Acesse o link encurtado.
@@ -119,7 +119,7 @@ Acesse `http://localhost:8000` no seu navegador.
 | **Derivação de Chave** | PBKDF2 (100.000 iterações com SHA-256) |
 | **Vetor de Inicialização (IV)** | 12 bytes (96 bits) gerados via `window.crypto.getRandomValues` |
 | **Salt Criptográfico** | 16 bytes (128 bits) gerados aleatoriamente |
-| **Formato de Rota** | Hash routing SPA (`/#/apelido` e `/#/5digitos`) |
+| **Formato de Rota** | Roteamento Direto (`/apelido` e `/5digitos` via 404 router) |
 | **Gerador Aleatório** | 5 dígitos únicos sem repetição (pool de 60 chars sem `I` e `l`) |
 | **Banco de Dados** | Supabase Cloud Database (REST API em tempo real) |
 | **Validação de Unicidade** | Verificação em tempo real no Supabase + Cache Local |
