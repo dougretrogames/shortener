@@ -124,12 +124,12 @@ function main() {
         // Atualiza links de ajuda para a mesma hash
         const noRedirect = document.querySelector("#no-redirect");
         if (noRedirect) {
-          noRedirect.href = `./decrypt/#${rawHash}`;
+          noRedirect.href = `./descriptografar/#${rawHash}`;
         }
 
         const hiddenLink = document.querySelector("#hidden");
         if (hiddenLink) {
-          hiddenLink.href = `./hidden/#${rawHash}`;
+          hiddenLink.href = `./favoritos-ocultos/#${rawHash}`;
         }
         return;
       }
@@ -154,6 +154,6 @@ function main() {
     };
   } else {
     // Caso não haja hash na URL, redireciona para a página de criação de links
-    window.location.replace("./create");
+    window.location.replace("./criar");
   }
 }

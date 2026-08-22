@@ -38,13 +38,13 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 - **Alvos de Toque Ergonômicos:** Botões, campos e checkboxes com altura mínima de 44px para facilidade de uso com o polegar.
 - Suporte a entalhes (*notches* / *Dynamic Island*) em celulares modernos com `env(safe-area-inset-*)`.
 
-### 7. 🕵️ Inspeção Segura sem Redirecionamento (`/decrypt`)
+### 7. 🕵️ Inspeção Segura sem Redirecionamento (`/descriptografar`)
 - Permite colar qualquer link criptografado e descriptografá-lo manualmente para inspecionar o destino real antes de abrir no navegador.
 
-### 8. 🔖 Favoritos Ocultos e Disfarçados (`/hidden`)
+### 8. 🔖 Favoritos Ocultos e Disfarçados (`/favoritos-ocultos`)
 - Técnica de *Bookmark Knocking* para disfarçar links confidenciais como páginas inofensivas na sua barra de favoritos (ex: artigos da Wikipédia em português ou páginas comuns).
 
-### 9. 🧪 Teste Educacional de Força Bruta (`/bruteforce`)
+### 9. 🧪 Teste Educacional de Força Bruta (`/forca-bruta`)
 - Ferramenta de prova de conceito que demonstra em tempo real a resistência dos links protegidos contra tentativas automatizadas de quebra de senha.
 
 ### 10. 🔒 Privacidade Absoluta
@@ -56,7 +56,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 ## 🚀 Como Usar o Encurtador de Links
 
 ### 1. Criando um Link Protegido
-1. Acesse a página **Criar Link** (`/create`).
+1. Acesse a página **Criar Link** (`/criar`).
 2. Digite a **URL de Destino** (ex: `https://meu-site.com/conteudo-secreto`).
 3. *(Opcional)* Defina um **Apelido Personalizado** (o sistema verificará a disponibilidade automaticamente).
 4. *(Opcional)* Insira uma **Dica de Senha** para ajudar a lembrar a senha futuramente.
@@ -71,7 +71,7 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 4. O navegador será redirecionado imediatamente para o destino seguro.
 
 ### 3. Inspecionando um Link Desconhecido
-1. Acesse a ferramenta **Descriptografar** (`/decrypt`).
+1. Acesse a ferramenta **Descriptografar** (`/descriptografar`).
 2. Cole a URL criptografada e a senha fornecida.
 3. Clique em **"Descriptografar"** para visualizar a URL original sem ser redirecionado automaticamente.
 

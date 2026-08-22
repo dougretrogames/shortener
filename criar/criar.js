@@ -325,7 +325,7 @@ async function onEncrypt() {
   highlight("output");
 
   // Ajusta o link de "Favorito Oculto"
-  const hiddenBaseUrl = new URL('../hidden/', window.location.href).href;
+  const hiddenBaseUrl = new URL('../favoritos-ocultos/', window.location.href).href;
   const bookmarkLink = document.querySelector("#bookmark");
   if (bookmarkLink) {
     bookmarkLink.href = `${hiddenBaseUrl}#${rawHash}`;
