@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <!-- Metadados -->
+  <meta charset="utf-8" />
+  <meta name="author" content="DougRetroGames / Encurtador de Links" />
+  <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico">
+
+  <title>Encurtador de Links - Painel de Controle (Dashboard)</title>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="../style.css" type="text/css" />
+
+  <!-- Scripts -->
+  <script type="text/javascript" src="../b64.js"></script>
+  <script type="text/javascript" src="../api.js"></script>
+  <script type="text/javascript" src="../auth.js"></script>
+  <script type="text/javascript" src="../tracker.js"></script>
+  <script type="text/javascript" src="painel.js"></script>
+</head>
+
+<body onload="initDashboard()">
+  <!-- Cabeçalho & Navegação -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="../criar" class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Encurtador de Links</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../criar" class="nav-link">Criar Link</a></li>
+          <li><a href="../painel" class="nav-link active">Painel</a></li>
+          <li><a href="../descriptografar" class="nav-link">Descriptografar</a></li>
+          <li><a href="../favoritos-ocultos" class="nav-link">Favoritos Ocultos</a></li>
+          <li><a href="../forca-bruta" class="nav-link">Força Bruta</a></li>
+          <li>
+            <a href="https://github.com/dougretrogames/encurtador" target="_blank" class="github-badge" rel="noreferrer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+              </svg>
+              Veja no GitHub
+            </a>
+          </li>
+          <li id="auth-header-slot"></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 960px;">
+    <!-- Aviso para navegadores sem JavaScript -->
+    <noscript>
+      <div class="noscript-warning">
+        <h3>JavaScript Desativado</h3>
+        <p>Você precisa ativar o JavaScript no seu navegador para utilizar o painel de controle.</p>
+      </div>
+    </noscript>
+
+    <!-- Banner de Boas-Vindas / Status de Sessão -->
+    <section class="page-header" style="text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="badge badge-info" id="session-badge">Modo Convidado (Local)</span>
+          <span class="badge badge-privacy" id="sync-badge">Sincronizado</span>
+        </div>
+        <h1 style="margin-bottom: 0.25rem;" id="dashboard-title">Painel de Gerenciamento</h1>
+        <p style="margin: 0; font-size: 0.95rem;" id="dashboard-subtitle">Acompanhe cliques, gerencie apelidos e controle seus links protegidos.</p>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="../criar" class="btn btn-primary btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Novo Link
+        </a>
+        <button class="btn btn-secondary btn-sm" onclick="exportData('json')" title="Exportar backup em formato JSON">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Exportar JSON
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="exportData('csv')" title="Exportar planilha CSV">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          Exportar CSV
+        </button>
+      </div>
+    </section>
+
+    <!-- Cards de Métricas (KPIs) -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        </div>
+        <div class="stat-value" id="stat-total-links">0</div>
+        <div class="stat-label">Links Criados</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="color: var(--accent-emerald);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+        <div class="stat-value" id="stat-total-clicks" style="color: #6ee7b7;">0</div>
+        <div class="stat-label">Cliques Totais</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="color: #f59e0b;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <div class="stat-value" id="stat-top-slug" style="font-size: 1.15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fde68a;">-</div>
+        <div class="stat-label">Link Mais Acessado</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="color: #a78bfa;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div class="stat-value" id="stat-avg-clicks" style="color: #c4b5fd;">0.0</div>
+        <div class="stat-label">Média Cliques/Link</div>
+      </div>
+    </div>
+
+    <!-- Tabela & Gerenciador de Links -->
+    <div class="card">
+      <div class="search-filter-bar">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="search-input" placeholder="Buscar por apelido, URL ou dica..." oninput="filterLinks()" />
+        </div>
+
+        <select id="sort-select" onchange="filterLinks()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.6rem 0.85rem; font-family: inherit; font-size: 0.88rem; outline: none;">
+          <option value="date-desc">Mais Recentes</option>
+          <option value="date-asc">Mais Antigos</option>
+          <option value="clicks-desc">Mais Clicados</option>
+          <option value="clicks-asc">Menos Clicados</option>
+          <option value="name-asc">Ordem Alfabética (A-Z)</option>
+        </select>
+      </div>
+
+      <div class="dashboard-table-container">
+        <table class="dashboard-table">
+          <thead>
+            <tr>
+              <th>Apelido / Link</th>
+              <th>Destino Original</th>
+              <th>Cliques</th>
+              <th>Data de Criação</th>
+              <th style="text-align: right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="dashboard-tbody">
+            <!-- Renderizado dinamicamente via painel.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="no-links-msg" style="display: none; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.5rem; opacity: 0.5;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <p style="font-size: 0.95rem; margin-bottom: 0.75rem;">Nenhum link encontrado no seu painel.</p>
+        <a href="../criar" class="btn btn-primary btn-sm">Criar Primeiro Link</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de Edição de Link -->
+  <div id="edit-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Editar Link</h2>
+        <button class="modal-close-btn" onclick="closeEditModal()">&times;</button>
+      </div>
+      
+      <form onsubmit="saveEditedLink(event)">
+        <input type="hidden" id="edit-original-slug" />
+
+        <div class="form-group labeled-input">
+          <label for="edit-slug">Apelido Personalizado (Slug)</label>
+          <div class="slug-input-group">
+            <span class="slug-prefix">/#</span>
+            <input type="text" id="edit-slug" placeholder="novo-apelido" oninput="checkEditSlugAvailability()" required />
+          </div>
+          <div id="edit-slug-status" class="slug-status" style="display: none;"></div>
+        </div>
+
+        <div class="form-group labeled-input">
+          <label for="edit-target-url">URL de Destino</label>
+          <input type="url" id="edit-target-url" placeholder="https://..." required />
+        </div>
+
+        <div class="form-group labeled-input">
+          <label for="edit-hint">Dica da Senha (Opcional)</label>
+          <input type="text" id="edit-hint" placeholder="Dica de senha..." />
+        </div>
+
+        <div class="btn-group" style="margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" id="save-edit-btn">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="dashboard-toast" class="alert-toast" style="position: fixed; bottom: 2rem; right: 2rem; background: rgba(16, 185, 129, 0.95); color: #050b17; font-weight: 600; padding: 0.75rem 1.25rem; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); z-index: 1000;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    <span id="toast-text">Ação concluída com sucesso!</span>
+  </div>
+
+  <!-- Rodapé -->
+  <footer>
+    <p>Encurtador de Links &bull; Criado por <a href="https://github.com/dougretrogames" target="_blank" rel="noreferrer"><strong>Doug Retro Games</strong></a> &bull; <a href="https://github.com/dougretrogames/encurtador" target="_blank" rel="noreferrer">Veja no GitHub</a></p>
+  </footer>
+</body>
+
+</html>

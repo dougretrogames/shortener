@@ -144,6 +144,11 @@ function main() {
           return;
         }
 
+        // Registra o clique para estatísticas na Dashboard
+        if (window.clickTracker) {
+          window.clickTracker.recordClick(customSlug || rawHash);
+        }
+
         // Redireciona para o destino seguro
         window.location.href = url;
       } catch {
