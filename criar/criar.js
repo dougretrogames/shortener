@@ -392,7 +392,7 @@ async function getAllExistingSlugs() {
   return slugSet;
 }
 
-// Verifica disponibilidade de apelido personalizado em tempo real (consulta global)
+// Verifica disponibilidade de apelido personalizado em tempo real (consulta global + filtro de profanidade)
 async function checkSlugAvailability() {
   const slugInput = document.querySelector("#custom-slug");
   const statusEl = document.querySelector("#slug-status");
@@ -406,6 +406,18 @@ async function checkSlugAvailability() {
   }
 
   const cleanSlug = normalizeSlug(rawVal);
+
+  // 1. Verificação de palavras inadequadas / baixo calão (PT-BR, EN, ES)
+  if (window.profanityFilter && window.profanityFilter.isProfane(cleanSlug)) {
+    statusEl.style.display = "flex";
+    statusEl.className = "slug-status exists";
+    statusEl.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span>O apelido <strong>"${escapeHtml(cleanSlug)}"</strong> contém termos impróprios ou palavras de baixo calão não permitidas.</span>
+    `;
+    return;
+  }
+
   const existingSlugs = await getAllExistingSlugs();
   const isTaken = existingSlugs.has(cleanSlug.toLowerCase());
 
@@ -433,7 +445,7 @@ async function checkSlugAvailability() {
 const SAFE_SLUG_CHARS = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
 
 // Gera um identificador aleatório único de 5 dígitos sem repetição de caracteres dentro do código,
-// e que NUNCA tenha sido utilizado por NENHUM usuário no sistema (db.json global ou local).
+// e que NUNCA tenha sido utilizado por NENHUM usuário no sistema (db.json global ou local) e livre de termos ofensivos.
 async function generateUniqueSlug() {
   const existingSlugs = await getAllExistingSlugs();
 
@@ -453,6 +465,11 @@ async function generateUniqueSlug() {
       const idx = randomBuffer[i] % chars.length;
       slug += chars[idx];
       chars.splice(idx, 1); // Garante que nenhum caractere se repita dentro do mesmo código
+    }
+
+    // Valida que o código não coincida com palavrões acidentais em nenhum idioma
+    if (window.profanityFilter && window.profanityFilter.isProfane(slug)) {
+      continue;
     }
 
     // Garante que o slug gerado é 100% inédito em todos os links já criados
@@ -596,8 +613,19 @@ async function onEncrypt() {
 
     const existingSlugs = await getAllExistingSlugs();
 
-    // Se o usuário está logado e digitou um apelido, garante que ele não existe no sistema global/local
+    // Se o usuário está logado e digitou um apelido, garante que ele é permitido e não existe no sistema
     if (isAuth && customSlug) {
+      if (window.profanityFilter && window.profanityFilter.isProfane(customSlug)) {
+        alert(`O apelido "/${customSlug}" contém termos impróprios ou palavras de baixo calão não permitidas.`);
+        const slugInput = document.querySelector("#custom-slug");
+        if (slugInput) slugInput.focus();
+        if (encryptBtn) {
+          encryptBtn.disabled = false;
+          encryptBtn.innerHTML = originalBtnHtml;
+        }
+        return;
+      }
+
       if (existingSlugs.has(customSlug.toLowerCase())) {
         alert(`O apelido "/${customSlug}" já está em uso por outro link no sistema. Por favor, escolha um nome diferente.`);
         const slugInput = document.querySelector("#custom-slug");

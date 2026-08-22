@@ -290,6 +290,14 @@ function checkEditSlugAvailability() {
     return;
   }
 
+  // 1. Verificação de profanidade / termos vulgares
+  if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
+    statusEl.style.display = "flex";
+    statusEl.className = "slug-status exists";
+    statusEl.innerHTML = `⚠️ O apelido contém termos impróprios ou palavras de baixo calão não permitidas.`;
+    return;
+  }
+
   const exists = allLinks.some(l => l.slug && l.slug.toLowerCase() === newSlug && l.slug.toLowerCase() !== originalSlug.toLowerCase());
 
   statusEl.style.display = "flex";
@@ -308,6 +316,12 @@ async function saveEditedLink(e) {
   const newSlug = document.querySelector("#edit-slug").value.trim().toLowerCase();
   const newTargetUrl = document.querySelector("#edit-target-url").value.trim();
   const newHint = document.querySelector("#edit-hint").value.trim();
+
+  // Validação de profanidade
+  if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
+    alert("O apelido personalizado contém termos impróprios ou palavras de baixo calão não permitidas.");
+    return;
+  }
 
   // Validação de segurança da URL
   try {
