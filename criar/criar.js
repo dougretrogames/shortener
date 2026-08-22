@@ -255,11 +255,11 @@ function normalizeSlug(str) {
     .toLowerCase();
 }
 
-// Obtém o conjunto de TODOS os links existentes (Supabase Nuvem + LocalStorage)
+// Obtém o conjunto de TODOS os links existentes (Supabase Nuvem como autoridade principal)
 async function getAllExistingSlugs() {
   const slugSet = new Set();
 
-  // 1. Supabase (Nuvem em tempo real para todo o planeta)
+  // 1. Supabase (Nuvem em tempo real - Fonte Única de Verdade)
   if (window.supabaseDb) {
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?select=slug`;
@@ -273,6 +273,8 @@ async function getAllExistingSlugs() {
           rows.forEach(r => {
             if (r.slug) slugSet.add(r.slug.toLowerCase());
           });
+          // O Supabase é a autoridade máxima mundial:
+          return slugSet;
         }
       }
     } catch (e) {
@@ -280,7 +282,7 @@ async function getAllExistingSlugs() {
     }
   }
 
-  // 2. LocalStorage
+  // 2. Fallback apenas se o Supabase estiver offline
   const localLinks = getSavedLinks();
   localLinks.forEach(l => {
     if (l.slug) slugSet.add(l.slug.toLowerCase());
