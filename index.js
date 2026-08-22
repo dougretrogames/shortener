@@ -9,6 +9,9 @@ function escapeHtml(str) {
 }
 
 function error(text) {
+  const appEl = document.querySelector("#unlock-app");
+  if (appEl) appEl.style.display = "block";
+
   const formEl = document.querySelector(".form");
   if (formEl) formEl.style.display = "none";
   
@@ -196,7 +199,10 @@ async function main() {
       slugContainer.style.display = "none";
     }
 
-    // Apenas para links protegidos por senha: exibe o formulário de desbloqueio
+    // Apenas para links protegidos por senha: exibe a interface e o formulário de desbloqueio
+    const appEl = document.querySelector("#unlock-app");
+    if (appEl) appEl.style.display = "block";
+
     if (formEl) formEl.style.display = "block";
     if (pwdInput) {
       pwdInput.value = "";
