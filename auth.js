@@ -242,9 +242,10 @@ function renderAuthHeader() {
     }
   });
 
-  // 2. Controla o estado e o ícone de cadeado do link 'Painel' no cabeçalho
-  const painelNavLinks = document.querySelectorAll("a[href*='painel']");
+  // 2. Controla o estado e o ícone de cadeado do link 'Painel' EXCLUSIVAMENTE na barra de navegação
+  const painelNavLinks = document.querySelectorAll(".nav-links a[href*='painel'], li.nav-painel-item a");
   painelNavLinks.forEach(link => {
+    if (link.classList.contains("user-avatar-btn")) return;
     const parentLi = link.closest('li');
     if (parentLi) {
       parentLi.style.display = ""; // Sempre visível tanto para visitante quanto para logado
