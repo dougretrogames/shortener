@@ -27,13 +27,45 @@
       if (errorTextEl) errorTextEl.innerText = `Erro: ${text}`;
     }
 
+    function focusUrlInput(e) {
+      if (e) e.preventDefault();
+      if (typeof closeMobileMenu === "function") closeMobileMenu();
+      const urlInput = document.querySelector("#url");
+      if (urlInput) {
+        urlInput.focus();
+        urlInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+
+    function scrollToTopHome(e) {
+      if (e) e.preventDefault();
+      if (typeof closeMobileMenu === "function") closeMobileMenu();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (document.activeElement && typeof document.activeElement.blur === "function") {
+        document.activeElement.blur();
+      }
+    }
+
     function main() {
-      if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const isHomeMode = searchParams.get("home") === "1" || searchParams.has("top");
+
+      if (isHomeMode) {
         if ("scrollRestoration" in history) {
           history.scrollRestoration = "manual";
         }
         window.scrollTo(0, 0);
+      } else {
+        // Acesso direto a /criar ou clique em Criar Link / Novo Link: rola direto e foca no campo
+        setTimeout(() => {
+          const urlInput = document.querySelector("#url");
+          if (urlInput) {
+            urlInput.focus();
+            urlInput.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 120);
       }
+
       if (!("b64" in window)) {
         error("Biblioteca Base64 não foi carregada.");
         return;
@@ -56,7 +88,7 @@
   <!-- Cabeçalho & Navegação -->
   <header class="site-header">
     <div class="header-container">
-      <a href="../criar" class="brand">
+      <a href="../criar?home=1" class="brand" onclick="scrollToTopHome(event)">
         <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -81,7 +113,7 @@
 
       <nav>
         <ul class="nav-links">
-          <li><a href="../criar" class="nav-link active">Criar Link</a></li>
+          <li><a href="../criar" class="nav-link active" onclick="focusUrlInput(event)">Criar Link</a></li>
           <li class="nav-painel-item">
             <a href="../painel" class="nav-link nav-link-locked" title="Painel (Acesso Restrito - Requer Login)">
               <span class="nav-link-label">Painel</span>

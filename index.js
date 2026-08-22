@@ -289,7 +289,7 @@ async function main() {
       }
     };
   } else {
-    // Caso não haja hash na URL, redireciona para a página de criação de links
-    window.location.replace("./criar");
+    // Caso seja acesso direto à raiz (homepage), redireciona no modo topo/home
+    window.location.replace("./criar?home=1");
   }
 }
