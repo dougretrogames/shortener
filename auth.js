@@ -10,7 +10,7 @@ const OAUTH_CONFIG_KEY = "encurtador_oauth_client_config";
 // Configurações padrão de Client IDs
 const DEFAULT_OAUTH_CONFIG = {
   googleClientId: "",
-  githubClientId: "",
+  githubClientId: "Ov23liE136qeUx6PqbH3",
   microsoftClientId: ""
 };
 
@@ -66,7 +66,12 @@ class AuthManager {
   loadOAuthConfig() {
     try {
       const saved = localStorage.getItem(OAUTH_CONFIG_KEY);
-      return saved ? { ...DEFAULT_OAUTH_CONFIG, ...JSON.parse(saved) } : DEFAULT_OAUTH_CONFIG;
+      const parsed = saved ? JSON.parse(saved) : {};
+      return {
+        googleClientId: parsed.googleClientId || DEFAULT_OAUTH_CONFIG.googleClientId,
+        githubClientId: parsed.githubClientId || DEFAULT_OAUTH_CONFIG.githubClientId,
+        microsoftClientId: parsed.microsoftClientId || DEFAULT_OAUTH_CONFIG.microsoftClientId
+      };
     } catch {
       return DEFAULT_OAUTH_CONFIG;
     }
