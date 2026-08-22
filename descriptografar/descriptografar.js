@@ -81,7 +81,22 @@ async function onDecrypt() {
     return;
   }
 
-  // Verifica parâmetros obrigatórios
+  // Se for um link sem senha (direto)
+  if (params["open"] || params["u"] || (!("e" in params) && params["u"])) {
+    const targetUrl = params["u"];
+    const resultOutput = document.querySelector("#result-output");
+    const resultSection = document.querySelector("#result-section");
+    const openLinkBtn = document.querySelector("#open-decrypted");
+
+    if (resultOutput) resultOutput.value = targetUrl;
+    if (openLinkBtn) openLinkBtn.href = targetUrl;
+    if (resultSection) resultSection.style.display = "block";
+
+    showStatus("✓ Link inspecionado com sucesso! (Este link foi criado sem senha)", false);
+    return;
+  }
+
+  // Verifica parâmetros obrigatórios para links criptografados
   if (!("v" in params && "e" in params)) {
     showStatus("Link corrompido. Parâmetros essenciais ausentes na URL.", true);
     return;

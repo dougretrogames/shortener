@@ -232,8 +232,21 @@ function validateInputs() {
   return true;
 }
 
-// Executa a criptografia AES-GCM e retorna o objeto codificado em Base64
+// Executa a criptografia AES-GCM (ou empacota link direto se sem senha) e retorna o objeto codificado em Base64
 async function generateFragment(url, passwd, hint, useRandomSalt, useRandomIv) {
+  // Se não foi informada senha, cria link direto aberto
+  if (!passwd || passwd.trim() === "") {
+    const output = {
+      v: LATEST_API_VERSION,
+      open: true,
+      u: url
+    };
+    if (hint && hint.trim() !== "") {
+      output["h"] = hint.trim();
+    }
+    return b64.encode(JSON.stringify(output));
+  }
+
   const api = apiVersions[LATEST_API_VERSION];
 
   const salt = useRandomSalt ? await api.randomSalt() : null;
@@ -262,17 +275,17 @@ async function generateFragment(url, passwd, hint, useRandomSalt, useRandomIv) {
   return b64.encode(JSON.stringify(output));
 }
 
-// Disparado ao clicar no botão "Criptografar e Gerar Link"
+// Disparado ao clicar no botão "Gerar Link Encurtado"
 async function onEncrypt() {
   if (!validateInputs()) {
     return;
   }
 
-  // Validação de confirmação de senha
+  // Validação de confirmação de senha apenas se informada
   const passwordInput = document.querySelector("#password");
   const confirmPasswordInput = document.querySelector("#confirm-password");
   
-  if (passwordInput.value !== confirmPasswordInput.value) {
+  if (passwordInput.value && passwordInput.value !== confirmPasswordInput.value) {
     confirmPasswordInput.setCustomValidity("As senhas não coincidem. Digite a mesma senha em ambos os campos.");
     confirmPasswordInput.reportValidity();
     return;
