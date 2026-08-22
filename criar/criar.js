@@ -323,29 +323,43 @@ async function onEncrypt() {
     // Constrói a URL de forma dinâmica considerando o domínio e caminho atual
     const baseUrl = new URL('../', window.location.href).href;
     
-    // Se houver apelido personalizado, anexa formato #slug@encrypted
+    // Se houver apelido personalizado, gera o link limpo #slug
     let outputUrl = "";
     let rawHash = "";
+    let shortUrl = "";
+    let autonomousUrl = "";
+
     if (customSlug) {
-      rawHash = `${encodeURIComponent(customSlug)}@${encrypted}`;
-      outputUrl = `${baseUrl}#${rawHash}`;
+      shortUrl = `${baseUrl}#${encodeURIComponent(customSlug)}`;
+      autonomousUrl = `${baseUrl}#${encodeURIComponent(customSlug)}@${encrypted}`;
+      outputUrl = shortUrl; // Link curto e limpo
+      rawHash = customSlug;
     } else {
       rawHash = encrypted;
       outputUrl = `${baseUrl}#${rawHash}`;
+      autonomousUrl = outputUrl;
     }
 
     const outputField = document.querySelector("#output");
     if (outputField) {
       outputField.value = outputUrl;
     }
+
+    let parsedEncrypted = null;
+    try {
+      parsedEncrypted = JSON.parse(b64.decode(encrypted));
+    } catch {}
     
     // Salva no histórico de links personalizados se houver apelido ou link criado
     if (customSlug || url) {
       saveToHistory({
         slug: customSlug || "link-" + Math.random().toString(36).substring(2, 7),
         outputUrl: outputUrl,
+        shortUrl: shortUrl || outputUrl,
+        autonomousUrl: autonomousUrl || outputUrl,
         targetUrl: url,
         hint: hint,
+        encryptedData: parsedEncrypted,
         createdAt: new Date().toISOString()
       });
     }
@@ -354,6 +368,11 @@ async function onEncrypt() {
     const outputSection = document.querySelector("#output-section");
     if (outputSection) {
       outputSection.style.display = "block";
+    }
+
+    const slugDbInfo = document.querySelector("#slug-db-info");
+    if (slugDbInfo) {
+      slugDbInfo.style.display = customSlug ? "block" : "none";
     }
 
     // Ajusta o link de "Favorito Oculto"
@@ -453,6 +472,28 @@ async function copyDirectText(text) {
       alertToast.classList.remove("visible");
     }, 3000);
   }
+}
+
+// Exporta todos os links salvos com apelido como arquivo db.json
+function exportDbJson() {
+  const links = getSavedLinks();
+  const dbObj = {};
+  links.forEach(item => {
+    if (item.slug && item.encryptedData) {
+      dbObj[item.slug.toLowerCase()] = item.encryptedData;
+    }
+  });
+
+  const jsonStr = JSON.stringify(dbObj, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "db.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // Aviso de segurança ao tentar desativar o IV aleatório

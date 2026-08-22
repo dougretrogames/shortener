@@ -1,3 +1,13 @@
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function error(text) {
   const formEl = document.querySelector(".form");
   if (formEl) formEl.style.display = "none";
@@ -10,7 +20,7 @@ function error(text) {
 }
 
 // Executado quando o <body> é carregado
-function main() {
+async function main() {
   if (window.location.hash) {
     const formEl = document.querySelector(".form");
     if (formEl) formEl.style.display = "block";
@@ -41,12 +51,83 @@ function main() {
     const rawHash = window.location.hash.slice(1);
     let payload = rawHash;
     let customSlug = null;
+    let params = null;
 
-    // Suporte a formato personalizado: #meu-link@base64Data
+    // Caso 1: Suporte a formato composto: #meu-link@base64Data
     if (rawHash.includes("@")) {
       const atIndex = rawHash.indexOf("@");
       customSlug = decodeURIComponent(rawHash.slice(0, atIndex));
       payload = rawHash.slice(atIndex + 1);
+      try {
+        params = JSON.parse(b64.decode(payload));
+      } catch {}
+    } else if ((rawHash.startsWith("ey") || rawHash.startsWith("e3")) && /^[A-Za-z0-9+/=_-]+$/.test(rawHash)) {
+      // Caso 2: Tentar decodificar direto como Base64 payload apenas se tiver formato Base64
+      try {
+        const decoded = b64.decode(rawHash);
+        const parsed = JSON.parse(decoded);
+        if (parsed && (parsed.v || parsed.e || parsed.open || parsed.u)) {
+          params = parsed;
+        }
+      } catch {}
+    }
+
+    // Caso 3: Apelido curto limpo (ex: #retrogamebox-vip) - busca no db.json e no localStorage
+    if (!params) {
+      customSlug = decodeURIComponent(rawHash).trim();
+      const slugKey = customSlug.toLowerCase();
+
+      // Busca no banco de dados db.json do repositório
+      let db = {};
+      try {
+        const dbRes = await fetch('./db.json?t=' + Date.now(), { cache: 'no-store' });
+        if (dbRes.ok) {
+          db = await dbRes.json();
+        }
+      } catch (e) {
+        console.warn("db.json não pôde ser carregado:", e);
+      }
+
+      let entry = db[slugKey] || db[customSlug];
+
+      // Se não encontrou no db.json, procura no histórico local (localStorage)
+      if (!entry) {
+        try {
+          const localRaw = localStorage.getItem("linklock_saved_custom_links");
+          if (localRaw) {
+            const list = JSON.parse(localRaw);
+            const found = list.find(l => (l.slug && l.slug.toLowerCase() === slugKey));
+            if (found) {
+              if (found.encryptedData) {
+                entry = found.encryptedData;
+              } else if (found.autonomousUrl && found.autonomousUrl.includes("@")) {
+                const atIdx = found.autonomousUrl.indexOf("@");
+                const b64Part = found.autonomousUrl.slice(atIdx + 1);
+                entry = JSON.parse(b64.decode(b64Part));
+              } else if (found.outputUrl && found.outputUrl.includes("@")) {
+                const atIdx = found.outputUrl.indexOf("@");
+                const b64Part = found.outputUrl.slice(atIdx + 1);
+                entry = JSON.parse(b64.decode(b64Part));
+              } else if (found.targetUrl) {
+                entry = { v: "0.0.1", open: true, u: found.targetUrl, h: found.hint };
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (entry) {
+        if (typeof entry === "string") {
+          try { params = JSON.parse(b64.decode(entry)); } catch {}
+        } else {
+          params = entry;
+        }
+      }
+    }
+
+    if (!params) {
+      error(`O link encurtado "#${escapeHtml(rawHash)}" não foi encontrado no banco de dados.`);
+      return;
     }
 
     // Exibe o badge de link personalizado se houver
@@ -57,14 +138,6 @@ function main() {
       slugContainer.style.display = "block";
     } else if (slugContainer) {
       slugContainer.style.display = "none";
-    }
-
-    let params;
-    try {
-      params = JSON.parse(b64.decode(payload));
-    } catch {
-      error("O link parece estar corrompido ou em formato inválido.");
-      return;
     }
 
     // Suporte a links diretos encurtados sem senha
