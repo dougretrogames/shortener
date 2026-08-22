@@ -1584,6 +1584,32 @@ footer a:hover {
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* Coluna Fixa de Ações (Sempre visível sem depender do scroll) */
+.dashboard-table th.th-actions,
+.dashboard-table td.td-actions {
+  position: sticky;
+  right: 0;
+  white-space: nowrap;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-table th.th-actions {
+  z-index: 5;
+  background: #151e30;
+  box-shadow: -6px 0 16px rgba(0, 0, 0, 0.45);
+}
+
+.dashboard-table td.td-actions {
+  z-index: 3;
+  background: #0d1422;
+  box-shadow: -6px 0 16px rgba(0, 0, 0, 0.45);
+  transition: background var(--transition-fast);
+}
+
+.dashboard-table tr:hover td.td-actions {
+  background: #172136;
+}
+
 .clicks-badge {
   display: inline-flex;
   align-items: center;
@@ -1599,9 +1625,10 @@ footer a:hover {
 }
 
 .table-actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  justify-content: flex-end;
 }
 
 .table-actions .btn-sm {
