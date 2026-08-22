@@ -114,6 +114,10 @@ body {
   gap: 1rem;
 }
 
+.header-container.header-container-centered {
+  justify-content: center;
+}
+
 .brand {
   display: flex;
   align-items: center;
