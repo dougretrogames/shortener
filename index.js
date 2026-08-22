@@ -47,8 +47,11 @@ async function main() {
       return;
     }
 
-    // Tenta obter os parâmetros codificados no fragmento da URL
-    const rawHash = window.location.hash.slice(1);
+    // Tenta obter os parâmetros codificados no fragmento da URL (suporta #/slug e #slug)
+    let rawHash = window.location.hash.slice(1);
+    if (rawHash.startsWith("/")) {
+      rawHash = rawHash.replace(/^\/+/, '');
+    }
     let payload = rawHash;
     let customSlug = null;
     let params = null;

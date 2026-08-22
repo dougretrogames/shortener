@@ -330,9 +330,9 @@ async function onEncrypt() {
     let autonomousUrl = "";
 
     if (customSlug) {
-      shortUrl = `${baseUrl}#${encodeURIComponent(customSlug)}`;
-      autonomousUrl = `${baseUrl}#${encodeURIComponent(customSlug)}@${encrypted}`;
-      outputUrl = shortUrl; // Link curto e limpo
+      shortUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}`;
+      autonomousUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}@${encrypted}`;
+      outputUrl = shortUrl; // Link curto e limpo no formato /#/slug
       rawHash = customSlug;
     } else {
       rawHash = encrypted;
