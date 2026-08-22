@@ -8,9 +8,16 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-function error(text) {
+function showUnlockInterface() {
+  const blankStyle = document.getElementById("blank-redirect-style");
+  if (blankStyle) blankStyle.remove();
+
   const appEl = document.querySelector("#unlock-app");
   if (appEl) appEl.style.display = "block";
+}
+
+function error(text) {
+  showUnlockInterface();
 
   const formEl = document.querySelector(".form");
   if (formEl) formEl.style.display = "none";
@@ -200,8 +207,7 @@ async function main() {
     }
 
     // Apenas para links protegidos por senha: exibe a interface e o formulário de desbloqueio
-    const appEl = document.querySelector("#unlock-app");
-    if (appEl) appEl.style.display = "block";
+    showUnlockInterface();
 
     if (formEl) formEl.style.display = "block";
     if (pwdInput) {
