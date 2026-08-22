@@ -329,6 +329,19 @@ function closeLoginModal() {
 // Processa o retorno da autorização OAuth do GitHub (Implicit Grant no hash ou PKCE)
 async function handleOAuthCallback() {
   const hash = window.location.hash;
+  const search = window.location.search;
+
+  // Trata erros de autorização retornados na URL se houver
+  if ((hash && hash.includes("error=")) || (search && search.includes("error="))) {
+    const params = new URLSearchParams(hash ? hash.substring(1) : search);
+    const errorDesc = params.get("error_description") || params.get("error");
+    if (errorDesc) {
+      console.warn("[OAuth] Mensagem de autorização:", errorDesc);
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState(null, document.title, cleanUrl);
+    }
+    return;
+  }
 
   if (hash && hash.includes("access_token=")) {
     const hashParams = new URLSearchParams(hash.substring(1));
