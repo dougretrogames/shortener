@@ -137,8 +137,8 @@ class AuthManager {
     const scope = encodeURIComponent("read:user user:email");
     const state = encodeURIComponent(JSON.stringify({ provider: "github", from: window.location.pathname }));
 
-    // URL oficial de autorização do GitHub OAuth
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${state}`;
+    // URL oficial de autorização do GitHub OAuth (sem forçar redirect_uri para usar o callback cadastrado no app)
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&scope=${scope}&state=${state}`;
 
     sessionStorage.setItem("pending_oauth_provider", "github");
     window.location.href = githubAuthUrl;
