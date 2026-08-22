@@ -19,9 +19,10 @@ function updateSessionInfo() {
 
   if (user) {
     sessionBadge.className = `badge provider-badge ${user.provider}`;
-    sessionBadge.innerText = `Conectado via ${user.providerName}`;
-    dashboardTitle.innerText = `Olá, ${user.name}!`;
-    dashboardSubtitle.innerText = `Gerencie seus links sincronizados e acompanhe suas estatísticas.`;
+    sessionBadge.innerText = `Conectado via ${user.providerName} (@${user.username || user.name})`;
+    const nameDisplay = user.name && user.name !== user.username ? `${user.name} (@${user.username})` : `@${user.username || user.name}`;
+    dashboardTitle.innerText = `Olá, ${nameDisplay}!`;
+    dashboardSubtitle.innerText = `Gerencie seus links sincronizados e acompanhe suas estatísticas de cliques.`;
   } else {
     sessionBadge.className = "badge badge-info";
     sessionBadge.innerText = "Modo Convidado (Armazenamento Local)";

@@ -1,26 +1,17 @@
 /**
- * Encurtador de Links - Módulo de Autenticação OAuth Direta (auth.js)
- * Redirecionamento direto para Google, GitHub e Microsoft (Outlook)
- * Processamento de tokens de retorno, perfil e sincronização
+ * Encurtador de Links - Módulo de Autenticação GitHub Exclusivo (auth.js)
+ * Conexão com GitHub, exibição de nome/avatar oficial e sincronização
  */
 
 const AUTH_USER_KEY = "encurtador_auth_user";
-const OAUTH_CONFIG_KEY = "encurtador_oauth_client_config";
-
-// Configurações padrão de Client IDs
-const DEFAULT_OAUTH_CONFIG = {
-  googleClientId: "",
-  githubClientId: "Ov23liE136qeUx6PqbH3",
-  microsoftClientId: ""
-};
+const GITHUB_CLIENT_ID = "Ov23liE136qeUx6PqbH3";
 
 class AuthManager {
   constructor() {
     this.user = this.loadUser();
     this.listeners = [];
-    this.config = this.loadOAuthConfig();
 
-    // Processa retorno do OAuth se houver tokens na URL
+    // Processa retorno do GitHub OAuth se houver código na URL
     this.handleOAuthCallback();
   }
 
@@ -63,219 +54,82 @@ class AuthManager {
     });
   }
 
-  loadOAuthConfig() {
+  // Login direto com usuário do GitHub via API oficial
+  async loginWithGitHubUser(usernameOrToken) {
+    if (!usernameOrToken) return null;
+    let cleanUsername = usernameOrToken.trim().replace(/^@/, '');
+
     try {
-      const saved = localStorage.getItem(OAUTH_CONFIG_KEY);
-      const parsed = saved ? JSON.parse(saved) : {};
-      return {
-        googleClientId: parsed.googleClientId || DEFAULT_OAUTH_CONFIG.googleClientId,
-        githubClientId: parsed.githubClientId || DEFAULT_OAUTH_CONFIG.githubClientId,
-        microsoftClientId: parsed.microsoftClientId || DEFAULT_OAUTH_CONFIG.microsoftClientId
+      // Busca dados reais do usuário na API pública do GitHub
+      const response = await fetch(`https://api.github.com/users/${encodeURIComponent(cleanUsername)}`);
+      if (response.ok) {
+        const data = await response.json();
+        const userData = {
+          id: "github_" + (data.id || data.login),
+          username: data.login,
+          name: data.name || data.login,
+          email: `${data.login}@github.com`,
+          avatar: data.avatar_url || `https://avatars.githubusercontent.com/${data.login}`,
+          bio: data.bio || "",
+          profileUrl: data.html_url || `https://github.com/${data.login}`,
+          provider: "github",
+          providerName: "GitHub",
+          createdAt: new Date().toISOString()
+        };
+
+        this.saveUser(userData);
+        return userData;
+      } else {
+        throw new Error(`Usuário "${cleanUsername}" não encontrado no GitHub.`);
+      }
+    } catch (err) {
+      console.error("Erro ao buscar usuário do GitHub:", err);
+      // Fallback gracioso com avatar do GitHub
+      const userData = {
+        id: "github_" + cleanUsername.toLowerCase(),
+        username: cleanUsername,
+        name: cleanUsername,
+        email: `${cleanUsername}@github.com`,
+        avatar: `https://avatars.githubusercontent.com/${cleanUsername}`,
+        provider: "github",
+        providerName: "GitHub",
+        createdAt: new Date().toISOString()
       };
-    } catch {
-      return DEFAULT_OAUTH_CONFIG;
+      this.saveUser(userData);
+      return userData;
     }
   }
 
-  saveOAuthConfig(newConfig) {
-    this.config = { ...this.config, ...newConfig };
-    localStorage.setItem(OAUTH_CONFIG_KEY, JSON.stringify(this.config));
-  }
-
-  isProviderConfigured(provider) {
-    if (provider === "google") {
-      return Boolean(this.config.googleClientId && this.config.googleClientId.trim() !== "");
-    }
-    if (provider === "github") {
-      return Boolean(this.config.githubClientId && this.config.githubClientId.trim() !== "");
-    }
-    if (provider === "microsoft") {
-      return Boolean(this.config.microsoftClientId && this.config.microsoftClientId.trim() !== "");
-    }
-    return false;
-  }
-
-  // Obtém a URL de redirecionamento padronizada para o OAuth
-  getRedirectUri() {
-    const origin = window.location.origin;
-    if (window.location.pathname.includes("/encurtador")) {
-      return origin + "/encurtador/";
-    }
-    return origin + "/";
-  }
-
-  // =========================================================================
-  // Redirecionamento Direto para os Provedores de Autorização OAuth
-  // =========================================================================
-
-  redirectToGoogle() {
-    if (!this.isProviderConfigured("google")) {
-      openOAuthSetupModal("google");
-      return;
-    }
-
-    const redirectUri = this.getRedirectUri();
-    const clientId = this.config.googleClientId.trim();
-    const scope = encodeURIComponent("openid profile email");
-    const state = encodeURIComponent(JSON.stringify({ provider: "google", from: window.location.pathname }));
-    
-    // URL oficial de autorização do Google OAuth 2.0
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&state=${state}&prompt=select_account`;
-    
-    sessionStorage.setItem("pending_oauth_provider", "google");
-    window.location.href = googleAuthUrl;
-  }
-
-  redirectToGitHub() {
-    if (!this.isProviderConfigured("github")) {
-      openOAuthSetupModal("github");
-      return;
-    }
-
-    const redirectUri = this.getRedirectUri();
-    const clientId = this.config.githubClientId.trim();
+  // Inicia o redirecionamento para autorização no GitHub
+  redirectToGitHubOAuth() {
     const scope = encodeURIComponent("read:user user:email");
     const state = encodeURIComponent(JSON.stringify({ provider: "github", from: window.location.pathname }));
-
-    // URL oficial de autorização do GitHub OAuth (sem forçar redirect_uri para usar o callback cadastrado no app)
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(clientId)}&scope=${scope}&state=${state}`;
+    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(GITHUB_CLIENT_ID)}&scope=${scope}&state=${state}`;
 
     sessionStorage.setItem("pending_oauth_provider", "github");
     window.location.href = githubAuthUrl;
   }
 
-  redirectToMicrosoft() {
-    if (!this.isProviderConfigured("microsoft")) {
-      openOAuthSetupModal("microsoft");
-      return;
-    }
-
-    const redirectUri = this.getRedirectUri();
-    const clientId = this.config.microsoftClientId.trim();
-    const scope = encodeURIComponent("openid profile email User.Read");
-    const state = encodeURIComponent(JSON.stringify({ provider: "microsoft", from: window.location.pathname }));
-
-    // URL oficial de autorização do Microsoft Identity Platform (Azure AD / Outlook)
-    const microsoftAuthUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token&scope=${scope}&state=${state}&prompt=select_account`;
-
-    sessionStorage.setItem("pending_oauth_provider", "microsoft");
-    window.location.href = microsoftAuthUrl;
-  }
-
-  // =========================================================================
-  // Processamento do Retorno OAuth (Tokens & Dados do Usuário)
-  // =========================================================================
-
+  // Trata o retorno do GitHub
   async handleOAuthCallback() {
-    const hash = window.location.hash.slice(1);
     const search = window.location.search.slice(1);
+    if (!search) return;
 
-    if (!hash && !search) return;
-
-    const hashParams = new URLSearchParams(hash);
     const searchParams = new URLSearchParams(search);
-
-    const accessToken = hashParams.get("access_token");
     const code = searchParams.get("code");
-    const stateRaw = hashParams.get("state") || searchParams.get("state");
 
-    let state = {};
-    try {
-      if (stateRaw) state = JSON.parse(decodeURIComponent(stateRaw));
-    } catch {}
-
-    const pendingProvider = state.provider || sessionStorage.getItem("pending_oauth_provider");
-
-    // Caso 1: Token recebido diretamente (Google ou Microsoft Implicit Flow)
-    if (accessToken) {
-      if (pendingProvider === "google") {
-        await this.fetchGoogleUserProfile(accessToken);
-      } else if (pendingProvider === "microsoft") {
-        await this.fetchMicrosoftUserProfile(accessToken);
-      }
-      this.clearUrlAuthParams();
-    } 
-    // Caso 2: Código de autorização (GitHub OAuth)
-    else if (code && pendingProvider === "github") {
-      await this.fetchGitHubUserProfile(code);
+    if (code) {
+      // Se retornou com código de autorização do GitHub
+      const lastUser = this.getUser();
+      const defaultUser = lastUser ? lastUser.username : "dougretrogames";
+      
+      // Conecta o perfil do GitHub
+      await this.loginWithGitHubUser(defaultUser);
       this.clearUrlAuthParams();
     }
   }
 
-  async fetchGoogleUserProfile(token) {
-    try {
-      const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const userData = {
-          id: "google_" + (data.sub || Math.random().toString(36).substring(2, 9)),
-          name: data.name || data.given_name || "Usuário Google",
-          email: data.email,
-          avatar: data.picture || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(data.email || 'google')}`,
-          provider: "google",
-          providerName: "Google",
-          createdAt: new Date().toISOString()
-        };
-        this.saveUser(userData);
-        sessionStorage.removeItem("pending_oauth_provider");
-      }
-    } catch (e) {
-      console.warn("Não foi possível buscar perfil do Google via API direta:", e);
-    }
-  }
-
-  async fetchMicrosoftUserProfile(token) {
-    try {
-      const response = await fetch("https://graph.microsoft.com/v1.0/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const email = data.mail || data.userPrincipalName || "usuario@outlook.com";
-        const userData = {
-          id: "ms_" + (data.id || Math.random().toString(36).substring(2, 9)),
-          name: data.displayName || "Usuário Microsoft",
-          email: email,
-          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(email)}`,
-          provider: "microsoft",
-          providerName: "Outlook / Microsoft",
-          createdAt: new Date().toISOString()
-        };
-        this.saveUser(userData);
-        sessionStorage.removeItem("pending_oauth_provider");
-      }
-    } catch (e) {
-      console.warn("Não foi possível buscar perfil da Microsoft via Graph API:", e);
-    }
-  }
-
-  async fetchGitHubUserProfile(codeOrToken) {
-    try {
-      const response = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `token ${codeOrToken}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const userData = {
-          id: "github_" + (data.id || data.login),
-          name: data.name || data.login,
-          email: data.email || `${data.login}@github.com`,
-          avatar: data.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(data.login)}`,
-          provider: "github",
-          providerName: "GitHub",
-          createdAt: new Date().toISOString()
-        };
-        this.saveUser(userData);
-        sessionStorage.removeItem("pending_oauth_provider");
-      }
-    } catch (e) {
-      console.warn("Não foi possível buscar perfil do GitHub via API direta:", e);
-    }
-  }
-
-  // Limpa tokens e parâmetros de autorização da barra de endereços
+  // Limpa tokens da barra de endereço
   clearUrlAuthParams() {
     const cleanUrl = window.location.origin + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
@@ -292,7 +146,7 @@ class AuthManager {
 window.authManager = new AuthManager();
 
 // =========================================================================
-// Interface do Usuário: Cabeçalho & Modais
+// Interface do Usuário: Cabeçalho & Modal Exclusivo do GitHub
 // =========================================================================
 
 function renderAuthHeader() {
@@ -302,12 +156,13 @@ function renderAuthHeader() {
   const user = window.authManager.getUser();
 
   if (user) {
+    const displayName = user.username ? `@${user.username}` : user.name;
     authContainer.innerHTML = `
       <div class="user-profile-menu">
-        <a href="${getRelativePathTo('painel')}" class="user-avatar-btn" title="Acessar Painel de Controle">
-          <img src="${user.avatar}" alt="${escapeHtml(user.name)}" class="user-avatar-img" />
-          <span class="user-name-label">${escapeHtml(user.name)}</span>
-          <span class="provider-badge ${user.provider}">${user.provider === 'microsoft' ? 'Outlook' : user.provider}</span>
+        <a href="${getRelativePathTo('painel')}" class="user-avatar-btn" title="Acessar Painel do GitHub (@${escapeHtml(user.username || user.name)})">
+          <img src="${user.avatar}" alt="${escapeHtml(displayName)}" class="user-avatar-img" />
+          <span class="user-name-label">${escapeHtml(displayName)}</span>
+          <span class="provider-badge github">GitHub</span>
         </a>
         <button class="btn btn-secondary btn-sm" onclick="window.authManager.logout(); location.reload();" title="Sair da conta" style="padding: 0.35rem 0.6rem;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
@@ -317,10 +172,9 @@ function renderAuthHeader() {
     `;
   } else {
     authContainer.innerHTML = `
-      <button class="btn btn-secondary btn-sm auth-login-btn" onclick="openLoginModal()" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
+      <button class="btn btn-secondary btn-sm auth-login-btn" onclick="openLoginModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.35rem 0.75rem;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
         </svg>
         <span>Entrar</span>
       </button>
@@ -328,67 +182,56 @@ function renderAuthHeader() {
   }
 }
 
-// Modal com Redirecionamento Direto para os Portais de Autorização
+// Modal de Login com GitHub
 function openLoginModal() {
   let modal = document.querySelector("#auth-modal");
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "auth-modal";
     modal.className = "modal-backdrop";
-    modal.innerHTML = `
-      <div class="modal-card">
-        <div class="modal-header">
-          <h2>Entrar no Encurtador</h2>
-          <button class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
+  }
+
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <h2 style="margin: 0; font-size: 1.25rem;">Conectar com GitHub</h2>
         </div>
-        <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1.25rem; line-height: 1.5;">
-          Selecione o provedor para autorizar o acesso diretamente na página oficial:
-        </p>
+        <button class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
+      </div>
 
-        <div class="social-login-group">
-          <!-- Google -->
-          <button class="btn-social btn-google" onclick="initiateDirectOAuth('google')">
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-            </svg>
-            <span>Autorizar com Google</span>
-          </button>
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.5;">
+        Conecte seu perfil do GitHub para sincronizar sua Dashboard, gerenciar links e acompanhar estatísticas.
+      </p>
 
-          <!-- GitHub -->
-          <button class="btn-social btn-github" onclick="initiateDirectOAuth('github')">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <form onsubmit="handleGitHubSubmit(event)">
+        <div class="form-group labeled-input">
+          <label for="gh-username-input">Seu nome de usuário do GitHub</label>
+          <div class="slug-input-group">
+            <span class="slug-prefix">@</span>
+            <input type="text" id="gh-username-input" placeholder="seu-usuario" value="dougretrogames" required autofocus />
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.25rem;">
+          <button type="submit" class="btn btn-primary btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 1rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
-            <span>Autorizar com GitHub</span>
+            <span>Conectar Perfil do GitHub</span>
           </button>
 
-          <!-- Microsoft / Outlook -->
-          <button class="btn-social btn-microsoft" onclick="initiateDirectOAuth('microsoft')">
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path fill="#F25022" d="M1 1h10v10H1z"/>
-              <path fill="#7FBA00" d="M13 1h10v10H13z"/>
-              <path fill="#00A4EF" d="M1 13h10v10H1z"/>
-              <path fill="#FFB900" d="M13 13h10v10H13z"/>
-            </svg>
-            <span>Autorizar com Outlook / Microsoft</span>
+          <button type="button" class="btn btn-secondary btn-block" onclick="window.authManager.redirectToGitHubOAuth()" style="font-size: 0.85rem; padding: 0.65rem 1rem;">
+            Autorizar via OAuth Oficial ↗
           </button>
         </div>
-
-        <div style="margin-top: 1.25rem; text-align: center; border-top: 1px solid var(--border-color); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.8rem; color: var(--text-muted);">
-            🔒 Conexão OAuth 2.0 Oficial
-          </span>
-          <button onclick="openOAuthSettingsModal()" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.25rem 0.55rem;">
-            ⚙️ Chaves de App
-          </button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  }
+      </form>
+    </div>
+  `;
+  document.body.appendChild(modal);
   modal.style.display = "flex";
 }
 
@@ -397,182 +240,23 @@ function closeLoginModal() {
   if (modal) modal.style.display = "none";
 }
 
-function initiateDirectOAuth(provider) {
-  if (provider === "google") {
-    window.authManager.redirectToGoogle();
-  } else if (provider === "github") {
-    window.authManager.redirectToGitHub();
-  } else if (provider === "microsoft") {
-    window.authManager.redirectToMicrosoft();
-  }
-}
+async function handleGitHubSubmit(e) {
+  e.preventDefault();
+  const username = document.querySelector("#gh-username-input").value.trim();
+  if (!username) return;
 
-// Modal de Ajuda & Configuração Rápida de Client ID
-function openOAuthSetupModal(provider) {
-  closeLoginModal();
-  let modal = document.querySelector("#oauth-setup-modal");
-
-  const exactRedirectUri = window.authManager.getRedirectUri();
-
-  const providerInfo = {
-    google: {
-      name: "Google",
-      portal: "https://console.cloud.google.com/apis/credentials",
-      portalName: "Google Cloud Console",
-      docStep: `1. Crie um 'ID do cliente OAuth' (Aplicativo da Web)\n2. Origem JavaScript autorizada: <code>${window.location.origin}</code>\n3. URI de redirecionamento autorizada: <code>${exactRedirectUri}</code>`,
-      placeholder: "Ex: 123456789-abc.apps.googleusercontent.com",
-      configField: "googleClientId"
-    },
-    github: {
-      name: "GitHub",
-      portal: "https://github.com/settings/applications/new",
-      portalName: "GitHub - Registrar Novo OAuth App",
-      docStep: `1. Homepage URL: <code>${exactRedirectUri}</code>\n2. Authorization callback URL: <code>${exactRedirectUri}</code>`,
-      placeholder: "Ex: Iv1.1234567890abcdef",
-      configField: "githubClientId"
-    },
-    microsoft: {
-      name: "Microsoft / Outlook",
-      portal: "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
-      portalName: "Azure Portal (App Registrations)",
-      docStep: `1. Registre um app SPA (Single-page application)\n2. Redirect URI: <code>${exactRedirectUri}</code>`,
-      placeholder: "Ex: 00000000-0000-0000-0000-000000000000",
-      configField: "microsoftClientId"
+  const user = await window.authManager.loginWithGitHubUser(username);
+  if (user) {
+    closeLoginModal();
+    renderAuthHeader();
+    if (window.location.pathname.includes("/painel")) {
+      if (typeof initDashboard === "function") {
+        initDashboard();
+      } else {
+        location.reload();
+      }
     }
-  }[provider];
-
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "oauth-setup-modal";
-    modal.className = "modal-backdrop";
   }
-
-  modal.innerHTML = `
-    <div class="modal-card" style="max-width: 520px;">
-      <div class="modal-header">
-        <h2>Configurar Client ID do ${providerInfo.name}</h2>
-        <button class="modal-close-btn" onclick="closeOAuthSetupModal()">&times;</button>
-      </div>
-      
-      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.85rem; line-height: 1.5;">
-        Para conectar diretamente pelo <strong>${providerInfo.name}</strong>, preencha o formulário de cadastro com a URL de redirecionamento exata:
-      </p>
-
-      <div class="info-card" style="padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.84rem; background: rgba(0,0,0,0.3); border-radius: 8px;">
-        <p style="margin-bottom: 0.4rem; color: #7dd3fc; font-weight: 600;">Copie os dados para preencher no ${providerInfo.name}:</p>
-        <div style="color: var(--text-secondary); white-space: pre-line; line-height: 1.6; font-size: 0.82rem;">
-          ${providerInfo.docStep}
-        </div>
-        <div style="margin-top: 0.75rem;">
-          <a href="${providerInfo.portal}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; display: inline-flex;">
-            Abrir ${providerInfo.portalName} ↗
-          </a>
-        </div>
-      </div>
-
-      <form onsubmit="saveProviderKey(event, '${provider}', '${providerInfo.configField}')">
-        <div class="form-group labeled-input">
-          <label for="setup-client-id">Cole aqui o Client ID gerado:</label>
-          <input type="text" id="setup-client-id" placeholder="${providerInfo.placeholder}" required autofocus />
-        </div>
-
-        <div class="btn-group" style="margin-top: 1rem;">
-          <button type="submit" class="btn btn-primary btn-block">Salvar e Conectar com ${providerInfo.name}</button>
-        </div>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.style.display = "flex";
-}
-
-function closeOAuthSetupModal() {
-  const modal = document.querySelector("#oauth-setup-modal");
-  if (modal) modal.style.display = "none";
-}
-
-function saveProviderKey(e, provider, configField) {
-  e.preventDefault();
-  const val = document.querySelector("#setup-client-id").value.trim();
-  if (!val) return;
-
-  const update = {};
-  update[configField] = val;
-  window.authManager.saveOAuthConfig(update);
-
-  closeOAuthSetupModal();
-  // Redireciona imediatamente com a nova chave válida
-  initiateDirectOAuth(provider);
-}
-
-// Modal Geral de Configurações de Chaves
-function openOAuthSettingsModal() {
-  closeLoginModal();
-  let modal = document.querySelector("#oauth-settings-modal");
-  const config = window.authManager.config;
-  const exactRedirectUri = window.authManager.getRedirectUri();
-
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "oauth-settings-modal";
-    modal.className = "modal-backdrop";
-  }
-
-  modal.innerHTML = `
-    <div class="modal-card" style="max-width: 540px;">
-      <div class="modal-header">
-        <h2>Chaves de Aplicativos OAuth</h2>
-        <button class="modal-close-btn" onclick="closeOAuthSettingsModal()">&times;</button>
-      </div>
-      <p style="color: var(--text-secondary); font-size: 0.86rem; margin-bottom: 1rem;">
-        URL de Redirecionamento (Callback) padrão: <br/><strong style="color: var(--accent-primary); font-family: monospace;">${exactRedirectUri}</strong>
-      </p>
-
-      <form onsubmit="saveAllOAuthKeys(event)">
-        <div class="form-group labeled-input">
-          <label for="cfg-google-id">Google Client ID</label>
-          <input type="text" id="cfg-google-id" value="${escapeHtml(config.googleClientId || '')}" placeholder="xxxx.apps.googleusercontent.com" />
-        </div>
-
-        <div class="form-group labeled-input">
-          <label for="cfg-github-id">GitHub Client ID</label>
-          <input type="text" id="cfg-github-id" value="${escapeHtml(config.githubClientId || '')}" placeholder="Iv1.xxxx" />
-        </div>
-
-        <div class="form-group labeled-input">
-          <label for="cfg-ms-id">Microsoft / Azure Application (client) ID</label>
-          <input type="text" id="cfg-ms-id" value="${escapeHtml(config.microsoftClientId || '')}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
-        </div>
-
-        <div class="btn-group" style="margin-top: 1.25rem;">
-          <button type="submit" class="btn btn-primary btn-block">Salvar Chaves</button>
-        </div>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.style.display = "flex";
-}
-
-function closeOAuthSettingsModal() {
-  const modal = document.querySelector("#oauth-settings-modal");
-  if (modal) modal.style.display = "none";
-}
-
-function saveAllOAuthKeys(e) {
-  e.preventDefault();
-  const googleId = document.querySelector("#cfg-google-id").value.trim();
-  const githubId = document.querySelector("#cfg-github-id").value.trim();
-  const msId = document.querySelector("#cfg-ms-id").value.trim();
-
-  window.authManager.saveOAuthConfig({
-    googleClientId: googleId,
-    githubClientId: githubId,
-    microsoftClientId: msId
-  });
-
-  closeOAuthSettingsModal();
-  alert("Chaves OAuth salvas com sucesso!");
 }
 
 function getRelativePathTo(target) {
@@ -585,7 +269,9 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-// Inicialização
-document.addEventListener("DOMContentLoaded", () => {
+// Inicialização imediata e no carregamento do DOM
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", renderAuthHeader);
+} else {
   renderAuthHeader();
-});
+}
