@@ -9,9 +9,6 @@ function escapeHtml(str) {
 }
 
 function showUnlockInterface() {
-  const blankStyle = document.getElementById("blank-redirect-style");
-  if (blankStyle) blankStyle.remove();
-
   const appEl = document.querySelector("#unlock-app");
   if (appEl) appEl.style.display = "block";
 }
@@ -186,7 +183,11 @@ async function main() {
       try {
         const urlObj = new URL(targetUrl);
         if (urlObj.protocol === "http:" || urlObj.protocol === "https:" || urlObj.protocol === "magnet:") {
-          // Redireciona instantaneamente sem exibir formulário ou qualquer tela intermediária
+          // Deixa a tela 100% branca pura durante o redirecionamento instantâneo
+          document.documentElement.style.cssText = "background: #ffffff !important; background-color: #ffffff !important;";
+          document.body.style.cssText = "background: #ffffff !important; background-color: #ffffff !important;";
+          if (document.body) document.body.innerHTML = "";
+          
           window.location.replace(targetUrl);
           return;
         }
