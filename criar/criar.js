@@ -189,6 +189,45 @@ function checkSlugAvailability() {
   }
 }
 
+// Alfabeto seguro para geração de links automáticos de 5 dígitos:
+// - Letras maiúsculas sem 'I' (25 caracteres)
+// - Letras minúsculas sem 'l' (25 caracteres)
+// - Números 0-9 (10 caracteres)
+// Total = 60 caracteres possíveis
+const SAFE_SLUG_CHARS = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
+
+// Gera um identificador aleatório único de 5 dígitos sem repetição de caracteres dentro do código
+function generateUniqueSlug() {
+  const existingLinks = getSavedLinks();
+  const existingSlugs = new Set(existingLinks.map(l => (l.slug || "").toLowerCase()));
+
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const chars = SAFE_SLUG_CHARS.split("");
+    let slug = "";
+
+    // Usa criptografia segura WebCrypto para aleatoriedade
+    const randomBuffer = new Uint32Array(5);
+    if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(randomBuffer);
+    } else {
+      for (let j = 0; j < 5; j++) randomBuffer[j] = Math.floor(Math.random() * 0xFFFFFFFF);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      const idx = randomBuffer[i] % chars.length;
+      slug += chars[idx];
+      chars.splice(idx, 1); // Garante que nenhum caractere se repita dentro do mesmo código
+    }
+
+    // Garante que o slug gerado é único no histórico
+    if (!existingSlugs.has(slug.toLowerCase())) {
+      return slug;
+    }
+  }
+
+  return "lk" + Math.random().toString(36).substring(2, 5);
+}
+
 // Seleciona e destaca o texto de um campo de entrada
 function highlight(id) {
   let output = document.querySelector("#" + id);
@@ -316,29 +355,23 @@ async function onEncrypt() {
     const useRandomSalt = saltCheckbox ? saltCheckbox.checked : true;
     const hint = document.querySelector("#hint") ? document.querySelector("#hint").value.trim() : "";
     const rawSlug = document.querySelector("#custom-slug") ? document.querySelector("#custom-slug").value.trim() : "";
-    const customSlug = normalizeSlug(rawSlug);
+    let customSlug = normalizeSlug(rawSlug);
+
+    // Se o usuário não digitou um apelido personalizado, gera automaticamente um código único de 5 dígitos
+    // (A-Z sem 'I', a-z sem 'l', 0-9, sem caracteres repetidos no mesmo código)
+    if (!customSlug) {
+      customSlug = generateUniqueSlug();
+    }
 
     const encrypted = await generateFragment(url, passwordInput ? passwordInput.value : "", hint, useRandomSalt, useRandomIv);
     
     // Constrói a URL de forma dinâmica considerando o domínio e caminho atual
     const baseUrl = new URL('../', window.location.href).href;
     
-    // Se houver apelido personalizado, gera o link limpo #slug
-    let outputUrl = "";
-    let rawHash = "";
-    let shortUrl = "";
-    let autonomousUrl = "";
-
-    if (customSlug) {
-      shortUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}`;
-      autonomousUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}@${encrypted}`;
-      outputUrl = shortUrl; // Link curto e limpo no formato /#/slug
-      rawHash = customSlug;
-    } else {
-      rawHash = encrypted;
-      outputUrl = `${baseUrl}#${rawHash}`;
-      autonomousUrl = outputUrl;
-    }
+    const shortUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}`;
+    const autonomousUrl = `${baseUrl}#/${encodeURIComponent(customSlug)}@${encrypted}`;
+    const outputUrl = shortUrl; // Link curto e limpo no formato /#/slug
+    const rawHash = customSlug;
 
     const outputField = document.querySelector("#output");
     if (outputField) {
