@@ -1,8 +1,8 @@
-# Shortener 🔒
+# Shortener 🔒🔗
 
-> **Proteja e encurte URLs com senha usando criptografia AES-256 de padrão militar diretamente no navegador.**
+> **Encurtador de links moderno e protetor de URLs com senha usando criptografia militar AES-256 diretamente no navegador.**
 
-Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalmente responsiva para celulares e computadores**, suporte a **autenticação oficial com GitHub**, **painel de controle (Dashboard)** com contador de cliques, **links curtos 100% limpos (`/apelido` ou `/5digitos`)**, **banco de dados em nuvem Supabase em tempo real**, **verificação global instantânea de duplicidade** e **100% em Português do Brasil (PT-BR)**.
+O **Shortener** é uma aplicação web completa que une o melhor dos dois mundos: um **encurtador de links profissional** (com apelidos personalizados ou códigos aleatórios limpos de 5 dígitos) e um **sistema seguro de proteção de URLs por senha**, com **painel de controle (Dashboard)**, **contador de cliques em tempo real**, **banco de dados em nuvem Supabase**, **autenticação oficial via GitHub** e interface moderna com tema escuro 100% responsiva para desktop e dispositivos móveis.
 
 [👉 Acesse o Repositório no GitHub](https://github.com/dougretrogames/shortener) | [🚀 Teste a Aplicação Online](https://dougretrogames.github.io/shortener/criar/)
 
@@ -10,78 +10,133 @@ Uma aplicação web moderna com **tema escuro**, visual sofisticado, **totalment
 
 ## 🌟 Principais Funcionalidades
 
-### 1. 🛡️ Criptografia Militar no Lado do Cliente (100% Client-Side)
-- Toda a criptografia e descriptografia ocorre localmente no seu dispositivo utilizando a API nativa [`SubtleCrypto`](https://developer.mozilla.org/pt-BR/docs/Web/API/SubtleCrypto).
-- Emprega **AES-256-GCM** para proteção de dados e **PBKDF2** com **100.000 iterações** de **SHA-256** para derivação segura de chaves a partir da senha digitada.
-- Suporte a **Vetor de Inicialização (IV) aleatório de 96 bits** e **Salt criptográfico de 128 bits** para proteção contra tabelas rainbow e ataques de dicionário.
-
-### 2. 🔗 Links Curtos 100% Limpos e Elegantes (`/apelido` e `/5digitos`)
-- **URLs Ultra-Curtas (Sem `#`):** Links limpos e profissionais:
-  - Com apelido personalizado: `https://dougretrogames.github.io/shortener/retrogamebox-vip`
+### 1. 🔗 Encurtador de Links Limpo e Profissional (`/apelido` e `/5digitos`)
+- **URLs Ultra-Curtas:** Gera links compactos, elegantes e diretos sem hash `#` na barra de endereços:
+  - Com apelido personalizado: `https://dougretrogames.github.io/shortener/retrobox`
   - Automático com 5 dígitos: `https://dougretrogames.github.io/shortener/6x8qt`
-- **Zero Exposição de Chave:** A chave criptografada não fica visível na barra de endereços do link compartilhado.
+- **Gerador Inteligente de 5 Dígitos:** Sorteia códigos únicos a partir de um pool de 60 caracteres legíveis (excluindo caracteres ambíguos como `I` maiúsculo e `l` minúsculo), sem repetição interna de dígitos.
+- **Validação Global de Unicidade:** Impede colisões de apelidos entre usuários no mundo inteiro em tempo real.
 
-### 3. 🎲 Gerador Automático de Códigos de 5 Dígitos
-- Se nenhum apelido for digitado, o sistema gera automaticamente um código único de **5 caracteres**:
-  - **Pool de 60 Caracteres:** Maiúsculas (`A-Z` sem o `I`), Minúsculas (`a-z` sem o `l`) e Números (`0-9`).
-  - **Sem Repetição Interna:** Os 5 dígitos sorteados são estritamente distintos entre si.
-  - **Legibilidade Total:** As letras `I` maiúsculo e `l` minúsculo foram excluídas para evitar qualquer ambiguidade visual com `1` ou `l`.
+### 2. 🛡️ Criptografia Militar no Navegador (100% Client-Side)
+- Toda a criptografia e descriptografia ocorre localmente no seu dispositivo utilizando a API nativa [`SubtleCrypto`](https://developer.mozilla.org/pt-BR/docs/Web/API/SubtleCrypto).
+- Emprega **AES-256-GCM** para proteção de dados e **PBKDF2** com **100.000 iterações** de **SHA-256** para derivação de chaves.
+- Proteção contra ataques de dicionário e tabelas rainbow com **Salt de 128 bits** e **IV de 96 bits** aleatórios.
+- Se o usuário não definir uma senha, o link funciona como um encurtador direto de alta performance.
 
-### 4. ⚡ Banco de Dados em Nuvem em Tempo Real (Supabase)
-- Todos os links criados por **qualquer visitante no mundo** são salvos instantaneamente (tempo de resposta de ~50ms) no Supabase.
-- **Segurança Máxima:** O banco de dados armazena apenas o *ciphertext* cifrado em AES-256 com Salt e IV. É matematicamente impossível descobrir a URL de destino sem a senha correta.
-- **Zero Dependência de Commits:** Não requer commits manuais no repositório; os links ficam disponíveis mundialmente no exato momento do clique.
+### 3. ⚡ Banco de Dados em Nuvem em Tempo Real (Supabase)
+- Links criados ficam imediatamente disponíveis em escala global (~50ms de latência) sem necessidade de commits no repositório.
+- Armazena exclusivamente o conteúdo criptografado (*ciphertext*), garantindo privacidade total mesmo para quem administra o banco de dados.
 
-### 5. 🌐 Validação Global de Unicidade em Tempo Real
-- Impede colisões de links entre todos os usuários:
-  - Consulta o banco em nuvem Supabase e o armazenamento local.
-  - Alerta imediatamente se um apelido já estiver em uso: `❌ O apelido "..." já está em uso por outro link cadastrado.`
-  - Garante que códigos automáticos de 5 dígitos sejam sempre 100% inéditos no mundo.
+### 4. 🔑 Autenticação com GitHub & Painel de Controle (`/painel`)
+- **Login OAuth Oficial:** Conecte sua conta do GitHub com fluxo seguro PKCE.
+- **Métricas e KPIs:** Monitore contador de cliques em tempo real, links mais acessados e data de criação.
+- **Coluna Fixa de Ações:** Botões de copiar, testar, editar e excluir permanentemente links sempre acessíveis sem depender de scroll horizontal.
+- **Exportação de Dados:** Exporte seus relatórios completos em formato **JSON** ou **CSV** com sanitização contra fórmulas maliciosas.
 
-### 6. ⚠️ Tela Modal de Confirmação de Exclusão Permanente
-- Ao excluir um link ou limpar o histórico, uma tela modal de segurança avisa com destaque:
-  - Tag visual: `⚠️ AÇÃO PERMANENTE E IRREVERSÍVEL`.
-  - Exibe o identificador do link a ser apagado.
-  - Alerta explícito de que o link será **excluído permanentemente** e não poderá ser recuperado, liberando o apelido para novos cadastros.
-
-### 7. 🔑 Autenticação com GitHub & Dashboard (`/painel`)
-- **Login Oficial:** Conecte sua conta do GitHub via OAuth para gerenciar links e acompanhar estatísticas de cliques.
-- **Métricas e KPIs:** Acompanhe contagem de cliques em tempo real, link mais acessado e histórico detalhado.
-- **Edição e Exportação:** Edite destinos, altere dicas e exporte relatórios em **JSON** e planilha **CSV** (com sanitização contra injeção de fórmulas CWE-1236).
-
-### 8. 👁️ Alternância de Visibilidade de Senhas & Design Responsivo
-- Botões de alternância de visualização de senha com correção de sobreposição para Microsoft Edge/Chromium.
-- Layout 100% responsivo com cabeçalho perfeitamente centralizado e otimizado para celulares, tablets e desktops (suporte a iOS safe areas e touch scroll suave).
-
-### 9. 🕵️ Descriptografar (`/descriptografar`), Favoritos Ocultos (`/favoritos-ocultos`) e Força Bruta (`/forca-bruta`)
-- **Descriptografar Manual:** Inspecione destinos de links sem redirecionamento automático.
-- **Bookmark Knocking:** Disfarce links confidenciais na barra de favoritos do navegador.
-- **Teste de Força Bruta:** Ferramenta educacional interativa de demonstração de resistência criptográfica.
+### 5. 📱 Interface Responsiva & Recursos Extras
+- Cabeçalho mobile alinhado em linha única com menu hambúrguer ultra-rápido.
+- **Descriptografar Manual (`/descriptografar`):** Inspecione destinos sem redirecionamento automático.
+- **Favoritos Ocultos (`/favoritos-ocultos`):** Crie marcadores disfarçados para a barra de favoritos.
+- **Teste de Força Bruta (`/forca-bruta`):** Demonstração educacional de segurança criptográfica.
 
 ---
 
-## 🚀 Como Usar o Shortener
+## 🛠️ Passo a Passo: Como Integrar com o Supabase (Para quem clonar o projeto)
 
-### 1. Criando um Link Protegido
-1. Acesse a página **Criar Link** (`/criar/`).
-2. Digite a **URL de Destino** (ex: pasta do Google Drive, arquivo ou página web).
-3. *(Opcional)* Defina um **Apelido Personalizado** (ou deixe em branco para gerar um código automático de 5 dígitos).
-4. *(Opcional)* Insira uma **Dica de Senha**.
-5. Digite e confirme a **Senha de Proteção** (opcional caso queira apenas encurtar).
-6. Clique em **"Criptografar e Gerar Link"**.
-7. Copie o link curto gerado (ex: `https://dougretrogames.github.io/shortener/retrogamebox-vip` ou `/6x8qt`).
+Se você clonou este repositório e deseja hospedar sua própria versão com banco de dados em nuvem e login pelo GitHub, siga o passo a passo abaixo:
 
-### 2. Desbloqueando um Link
-1. Acesse o link encurtado.
-2. A página carregará os parâmetros seguros via Supabase.
-3. Digite a senha correta e clique em **"Desbloquear Link"** (ou pressione `Enter`).
-4. O navegador descriptografará o destino localmente e redirecionará com segurança!
+### Passo 1: Criar uma Conta e um Projeto no Supabase
+1. Acesse [supabase.com](https://supabase.com) e crie uma conta gratuita.
+2. No painel, clique em **"New Project"**.
+3. Escolha uma organização, defina um nome para o projeto, uma senha segura para o banco de dados e selecione a região mais próxima (ex: *South America - São Paulo*).
+4. Aguarde cerca de 1 a 2 minutos até o provisionamento do projeto ser concluído.
 
 ---
 
-## 📥 Instalação e Execução Local
+### Passo 2: Criar a Tabela `short_links` e as Políticas de Segurança (SQL)
+1. No menu lateral do Supabase, clique em **SQL Editor**.
+2. Clique em **"New Query"**, cole o script SQL abaixo e clique em **"Run"** (ou `Ctrl + Enter`):
 
-Por ser uma aplicação 100% estática (HTML, CSS e JavaScript puros), não requer instalação de pacotes pesados de backend.
+```sql
+-- 1. Criação da tabela principal de links encurtados
+CREATE TABLE IF NOT EXISTS public.short_links (
+    slug TEXT PRIMARY KEY,
+    encrypted_data JSONB NOT NULL,
+    author_type TEXT DEFAULT 'visitante',
+    author_name TEXT DEFAULT 'Visitante',
+    hint TEXT DEFAULT '',
+    clicks BIGINT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. Habilitação da Segurança por Nível de Linha (Row Level Security - RLS)
+ALTER TABLE public.short_links ENABLE ROW LEVEL SECURITY;
+
+-- 3. Política para permitir leitura pública de links
+CREATE POLICY "Permitir leitura publica de links"
+ON public.short_links FOR SELECT
+USING (true);
+
+-- 4. Política para permitir criação pública de links
+CREATE POLICY "Permitir criacao publica de links"
+ON public.short_links FOR INSERT
+WITH CHECK (true);
+
+-- 5. Política para permitir atualização de links e incremento de cliques
+CREATE POLICY "Permitir atualizacao publica de links"
+ON public.short_links FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+-- 6. Política para permitir exclusão de links
+CREATE POLICY "Permitir exclusao publica de links"
+ON public.short_links FOR DELETE
+USING (true);
+```
+
+---
+
+### Passo 3: Configurar a Autenticação com GitHub (OAuth)
+1. **Criar OAuth App no GitHub:**
+   - Acesse o GitHub em **Settings** > **Developer settings** > **OAuth Apps** > **New OAuth App**.
+   - **Application name:** `Shortener`
+   - **Homepage URL:** URL do seu site (ex: `https://seu-usuario.github.io/shortener/` ou `http://localhost:8000/`)
+   - **Authorization callback URL:** Obtenha no Supabase em **Authentication** > **Providers** > **GitHub** > campo **Callback URL (for OAuth)** (formato: `https://<seu-projeto>.supabase.co/auth/v1/callback`).
+   - Clique em **Register application**.
+   - Gere um **Client Secret** e copie o **Client ID** e o **Client Secret**.
+
+2. **Ativar o Provedor no Supabase:**
+   - No painel do Supabase, vá em **Authentication** > **Providers** > **GitHub**.
+   - Ative a opção **"Enable GitHub"**.
+   - Cole o **Client ID** e o **Client Secret** gerados no GitHub.
+   - Clique em **Save**.
+
+3. **Configurar URLs de Redirecionamento no Supabase:**
+   - Em **Authentication** > **URL Configuration**:
+   - Defina o **Site URL** com o endereço principal (ex: `https://seu-usuario.github.io/shortener/`).
+   - Em **Redirect URLs**, adicione todas as URLs autorizadas:
+     - `http://localhost:8000/**`
+     - `https://seu-usuario.github.io/shortener/**`
+   - Clique em **Save**.
+
+---
+
+### Passo 4: Conectar o Código ao seu Supabase
+1. No Supabase, vá em **Project Settings** > **API**.
+2. Copie a **Project URL** (`https://xxxxxxxx.supabase.co`) e a chave **Project API Keys (anon public)**.
+3. Abra o arquivo [`supabase-db.js`](supabase-db.js) no seu projeto e atualize as constantes:
+
+```javascript
+// Substitua pelas credenciais do seu projeto Supabase:
+const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";
+const SUPABASE_ANON_KEY = "SUA_CHAVE_ANONIMA_PUBLICA_AQUI";
+```
+
+Pronto! Seu projeto agora está totalmente conectado e funcional com seu próprio banco de dados e autenticação.
+
+---
+
+## 📥 Execução Local
 
 ```bash
 # 1. Clone o repositório
@@ -90,7 +145,7 @@ git clone https://github.com/dougretrogames/shortener.git
 # 2. Acesse a pasta
 cd shortener
 
-# 3. Inicie um servidor local (escolha um):
+# 3. Inicie um servidor local estático:
 python -m http.server 8000
 # ou
 npx serve .
@@ -102,12 +157,10 @@ Acesse `http://localhost:8000` no seu navegador.
 
 ## 🌐 Publicação no GitHub Pages
 
-1. Acesse as **Configurações (Settings)** do seu repositório no GitHub.
-2. No menu lateral, clique em **Pages**.
-3. Em **Source**, selecione **Deploy from a branch**.
-4. Em **Branch**, selecione a branch **`master`** e a pasta **`/(root)`**.
-5. Clique em **Save**. Seu site estará disponível em instantes em:  
-   👉 **`https://dougretrogames.github.io/shortener/`**
+1. No seu repositório no GitHub, acesse **Settings** > **Pages**.
+2. Em **Build and deployment** > **Source**, escolha **Deploy from a branch**.
+3. Selecione a branch **`master`** (ou `main`) e a pasta **`/(root)`**.
+4. Clique em **Save**. Em instantes seu encurtador estará online mundialmente!
 
 ---
 
@@ -115,14 +168,15 @@ Acesse `http://localhost:8000` no seu navegador.
 
 | Recurso | Detalhes da Implementação |
 | :--- | :--- |
-| **Algoritmo de Criptografia** | AES-GCM (Chave de 256 bits) |
+| **Tipo de Aplicação** | Encurtador de Links & Protetor de URLs Criptografadas |
+| **Algoritmo de Criptografia** | AES-GCM (Chave de 256 bits via Web Crypto API) |
 | **Derivação de Chave** | PBKDF2 (100.000 iterações com SHA-256) |
-| **Vetor de Inicialização (IV)** | 12 bytes (96 bits) gerados via `window.crypto.getRandomValues` |
+| **Vetor de Inicialização (IV)** | 12 bytes (96 bits) gerados aleatoriamente |
 | **Salt Criptográfico** | 16 bytes (128 bits) gerados aleatoriamente |
-| **Formato de Rota** | Roteamento Direto (`/apelido` e `/5digitos` via 404 router) |
-| **Gerador Aleatório** | 5 dígitos únicos sem repetição (pool de 60 chars sem `I` e `l`) |
+| **Formato de Rota** | URLs Limpas (`/apelido` e `/5digitos` via SPA fallback 404) |
+| **Gerador Aleatório** | 5 caracteres únicos sem repetição (pool de 60 chars sem `I` e `l`) |
 | **Banco de Dados** | Supabase Cloud Database (REST API em tempo real) |
-| **Validação de Unicidade** | Verificação em tempo real no Supabase + Cache Local |
+| **Autenticação** | GitHub OAuth com suporte a PKCE |
 | **Compatibilidade** | Chrome, Edge, Firefox, Safari, Opera, iOS Safari, Android Chrome |
 
 ---
@@ -132,3 +186,4 @@ Acesse `http://localhost:8000` no seu navegador.
 - **Mantido por:** [DougRetroGames](https://github.com/dougretrogames/shortener)
 - **Base original inspirada em:** [Jacob Strieb](https://jstrieb.github.io)
 - **Licença:** Código aberto sob a licença [MIT](LICENSE).
+
