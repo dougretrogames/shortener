@@ -57,21 +57,23 @@ class AuthManager {
   // Login direto com usuário do GitHub via API oficial
   async loginWithGitHubUser(usernameOrToken) {
     if (!usernameOrToken) return null;
-    let cleanUsername = usernameOrToken.trim().replace(/^@/, '');
+    let cleanUsername = String(usernameOrToken).trim().replace(/^@/, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 39);
+    if (!cleanUsername) return null;
 
     try {
       // Busca dados reais do usuário na API pública do GitHub
       const response = await fetch(`https://api.github.com/users/${encodeURIComponent(cleanUsername)}`);
       if (response.ok) {
         const data = await response.json();
+        const safeAvatar = (data.avatar_url && String(data.avatar_url).startsWith("https://")) ? data.avatar_url : `https://avatars.githubusercontent.com/${cleanUsername}`;
         const userData = {
-          id: "github_" + (data.id || data.login),
-          username: data.login,
-          name: data.name || data.login,
-          email: `${data.login}@github.com`,
-          avatar: data.avatar_url || `https://avatars.githubusercontent.com/${data.login}`,
-          bio: data.bio || "",
-          profileUrl: data.html_url || `https://github.com/${data.login}`,
+          id: "github_" + String(data.id || data.login || cleanUsername),
+          username: String(data.login || cleanUsername),
+          name: String(data.name || data.login || cleanUsername),
+          email: `${cleanUsername}@github.com`,
+          avatar: safeAvatar,
+          bio: String(data.bio || ""),
+          profileUrl: `https://github.com/${cleanUsername}`,
           provider: "github",
           providerName: "GitHub",
           createdAt: new Date().toISOString()
@@ -84,7 +86,7 @@ class AuthManager {
       }
     } catch (err) {
       console.error("Erro ao buscar usuário do GitHub:", err);
-      // Fallback gracioso com avatar do GitHub
+      // Fallback gracioso com avatar seguro do GitHub
       const userData = {
         id: "github_" + cleanUsername.toLowerCase(),
         username: cleanUsername,
@@ -160,7 +162,7 @@ function renderAuthHeader() {
     authContainer.innerHTML = `
       <div class="user-profile-menu">
         <a href="${getRelativePathTo('painel')}" class="user-avatar-btn" title="Acessar Painel do GitHub (@${escapeHtml(user.username || user.name)})">
-          <img src="${user.avatar}" alt="${escapeHtml(displayName)}" class="user-avatar-img" />
+          <img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(displayName)}" class="user-avatar-img" />
           <span class="user-name-label">${escapeHtml(displayName)}</span>
           <span class="provider-badge github">GitHub</span>
         </a>

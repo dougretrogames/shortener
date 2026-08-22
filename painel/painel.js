@@ -150,16 +150,16 @@ function renderLinksTable() {
         </td>
         <td>
           <div class="table-actions" style="justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="copyLink('${escapeHtml(link.outputUrl)}')" title="Copiar Link Criptografado">
+            <button class="btn btn-secondary btn-sm" onclick="copyLink(decodeURIComponent('${encodeURIComponent(link.outputUrl || '')}'))" title="Copiar Link Criptografado">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
-            <a href="${escapeHtml(link.outputUrl)}" target="_blank" class="btn btn-secondary btn-sm" title="Testar / Abrir Link">
+            <a href="${escapeHtml(link.outputUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Testar / Abrir Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </a>
-            <button class="btn btn-secondary btn-sm" onclick="openEditModal('${escapeHtml(slug)}')" title="Editar Apelido ou Dados">
+            <button class="btn btn-secondary btn-sm" onclick="openEditModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Editar Apelido ou Dados">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="btn btn-danger btn-sm" onclick="deleteLink('${escapeHtml(slug)}')" title="Excluir Link">
+            <button class="btn btn-danger btn-sm" onclick="deleteLink(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Excluir Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -206,7 +206,7 @@ function checkEditSlugAvailability() {
   statusEl.style.display = "flex";
   if (exists) {
     statusEl.className = "slug-status exists";
-    statusEl.innerHTML = `⚠️ O apelido "${newSlug}" já está em uso por outro link.`;
+    statusEl.innerHTML = `⚠️ O apelido "${escapeHtml(newSlug)}" já está em uso por outro link.`;
   } else {
     statusEl.className = "slug-status available";
     statusEl.innerHTML = `✓ Apelido disponível!`;
@@ -219,6 +219,18 @@ function saveEditedLink(e) {
   const newSlug = document.querySelector("#edit-slug").value.trim();
   const newTargetUrl = document.querySelector("#edit-target-url").value.trim();
   const newHint = document.querySelector("#edit-hint").value.trim();
+
+  // Validação de segurança da URL
+  try {
+    const parsed = new URL(newTargetUrl);
+    if (!(parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "magnet:")) {
+      alert("A URL de destino deve começar com http://, https:// ou magnet:");
+      return;
+    }
+  } catch {
+    alert("Por favor, insira uma URL válida.");
+    return;
+  }
 
   const index = allLinks.findIndex(l => (l.slug || "").toLowerCase() === originalSlug.toLowerCase());
   if (index === -1) return;
@@ -272,6 +284,16 @@ function deleteLink(slug) {
   loadDashboardData();
 }
 
+// Sanitização contra CSV Formula Injection (CWE-1236)
+function sanitizeCsvValue(val) {
+  let str = String(val == null ? "" : val);
+  // Se iniciar com caracteres especiais de fórmula (=, +, -, @, tab, retorno de carro), prefixa com apóstrofo
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
 // Exportação de Dados
 function exportData(format) {
   if (!allLinks || allLinks.length === 0) {
@@ -290,12 +312,12 @@ function exportData(format) {
   } else if (format === "csv") {
     const headers = ["Apelido", "URL Destino", "Cliques", "Dica", "Data Criacao", "Link Completo"];
     const rows = allLinks.map(l => [
-      `"${(l.slug || '').replace(/"/g, '""')}"`,
-      `"${(l.targetUrl || '').replace(/"/g, '""')}"`,
-      l.clicks || 0,
-      `"${(l.hint || '').replace(/"/g, '""')}"`,
-      `"${l.createdAt || ''}"`,
-      `"${(l.outputUrl || '').replace(/"/g, '""')}"`
+      sanitizeCsvValue(l.slug),
+      sanitizeCsvValue(l.targetUrl),
+      Number(l.clicks) || 0,
+      sanitizeCsvValue(l.hint),
+      sanitizeCsvValue(l.createdAt),
+      sanitizeCsvValue(l.outputUrl)
     ]);
     content = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     mimeType = "text/csv;charset=utf-8;";

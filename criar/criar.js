@@ -112,15 +112,15 @@ function renderHistory() {
         <span class="history-date">Criado em: ${formatDate(item.createdAt)}</span>
       </div>
       <div class="history-actions">
-        <button class="btn btn-secondary btn-sm" onclick="copyDirectText('${escapeJsString(item.outputUrl)}')">
+        <button class="btn btn-secondary btn-sm" onclick="copyDirectText(decodeURIComponent('${encodeURIComponent(item.outputUrl || '')}'))">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           Copiar
         </button>
-        <a href="${escapeHtml(item.outputUrl)}" target="_blank" class="btn btn-secondary btn-sm">
+        <a href="${escapeHtml(item.outputUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
           Testar
         </a>
-        <button class="btn btn-danger btn-sm" onclick="deleteHistoryItem('${escapeJsString(item.slug)}')">
+        <button class="btn btn-danger btn-sm" onclick="deleteHistoryItem(decodeURIComponent('${encodeURIComponent(item.slug || '')}'))">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
       </div>

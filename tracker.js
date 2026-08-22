@@ -33,9 +33,14 @@ class ClickTracker {
     if (!slugOrHash) return;
 
     const key = String(slugOrHash).toLowerCase();
+    // Proteção contra Prototype Pollution
+    if (key === "__proto__" || key === "constructor" || key === "prototype" || key.length > 250) {
+      return;
+    }
+
     const now = new Date().toISOString();
 
-    if (!this.clicks[key]) {
+    if (!Object.prototype.hasOwnProperty.call(this.clicks, key)) {
       this.clicks[key] = {
         total: 0,
         history: [],
@@ -45,9 +50,13 @@ class ClickTracker {
 
     this.clicks[key].total += 1;
     this.clicks[key].lastAccessed = now;
+
+    // Sanitiza e limita o referrer para prevenir estouro de cota
+    let referrerClean = (document.referrer || "Direto / Favorito").slice(0, 150);
+
     this.clicks[key].history.push({
       timestamp: now,
-      referrer: document.referrer || "Direto / Favorito",
+      referrer: referrerClean,
       device: this.detectDevice()
     });
 

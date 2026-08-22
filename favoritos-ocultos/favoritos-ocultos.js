@@ -104,8 +104,12 @@ function onChangeDecrypt() {
   let newUrl;
   try {
     const newUrlInput = document.querySelector("#decrypt-bookmark-disguise");
-    const _ = new URL(newUrlInput.value);
-    newUrl = newUrlInput.value;
+    const parsed = new URL(newUrlInput.value.trim());
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      alert("Por favor, insira uma URL que utilize 'http://' ou 'https://'.");
+      return;
+    }
+    newUrl = parsed.toString().replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   } catch (_) {
     alert("Por favor, insira uma URL válida para o destino do disfarce.");
     return;
