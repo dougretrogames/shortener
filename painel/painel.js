@@ -83,9 +83,10 @@ async function loadDashboardData() {
         const outputUrl = `${cleanBaseUrl}${encodeURIComponent(remote.slug)}`;
         
         // Identifica o criador vinculado à conta no banco
-        let authorType = remote.author_type || enc.author_type || "github";
-        let authorUsername = remote.author_username || enc.author_username || (user ? user.username : "github");
-        let authorName = remote.author_name || enc.author_name || (authorType === "github" ? `@${authorUsername}` : "Visitante");
+        const isGithubAuthor = enc.author_type === "github" || remote.author_type === "github" || (enc.author_username && enc.author_username !== "visitante") || (remote.author_username && remote.author_username !== "visitante");
+        let authorType = isGithubAuthor ? "github" : "visitante";
+        let authorUsername = enc.author_username || remote.author_username || (user ? user.username : "");
+        let authorName = enc.author_name || remote.author_name || (isGithubAuthor ? (authorUsername ? `@${authorUsername}` : "GitHub") : "Visitante");
 
         return {
           slug: remote.slug,
@@ -194,8 +195,8 @@ function renderLinksTable() {
     const slug = link.slug || "sem-apelido";
     const targetUrl = link.targetUrl || link.outputUrl || "";
     const clicks = link.clicks || 0;
-    const isGithub = link.authorType === "github";
-    const authorDisplay = link.authorName || (isGithub ? "GitHub" : "Visitante");
+    const isGithub = link.authorType === "github" || (link.authorUsername && link.authorUsername !== "visitante");
+    const authorDisplay = link.authorName || (isGithub ? `@${link.authorUsername || "GitHub"}` : "Visitante");
     const dateFormatted = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recente";
 
     html += `

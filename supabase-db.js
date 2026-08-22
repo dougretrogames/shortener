@@ -228,6 +228,9 @@ const supabaseDb = {
       if (authorAvatar) encryptedData.author_avatar = authorAvatar;
     }
 
+    const finalAuthorType = authorType || "visitante";
+    const finalAuthorName = authorName || (finalAuthorType === "github" ? (authorUsername ? `@${authorUsername}` : "GitHub") : "Visitante");
+
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
       const payload = {
@@ -235,7 +238,9 @@ const supabaseDb = {
         encrypted_data: encryptedData,
         hint: hint || null,
         clicks: 0,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        author_type: finalAuthorType,
+        author_name: finalAuthorName
       };
 
       const res = await fetch(endpoint, {
@@ -282,7 +287,9 @@ const supabaseDb = {
           "Prefer": "return=representation"
         },
         body: JSON.stringify({
-          encrypted_data: enc
+          encrypted_data: enc,
+          author_type: enc.author_type,
+          author_name: enc.author_name
         })
       });
 
