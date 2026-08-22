@@ -1,10 +1,11 @@
 /**
  * Encurtador de Links - Módulo de Autenticação GitHub Exclusivo (auth.js)
- * Conexão com GitHub, exibição de nome/avatar oficial e sincronização
+ * Conexão direta com GitHub com exibição de avatar e nome oficial
  */
 
 const AUTH_USER_KEY = "encurtador_auth_user";
 const GITHUB_CLIENT_ID = "Ov23liE136qeUx6PqbH3";
+const DEFAULT_GH_USER = "dougretrogames";
 
 class AuthManager {
   constructor() {
@@ -54,14 +55,12 @@ class AuthManager {
     });
   }
 
-  // Login direto com usuário do GitHub via API oficial
-  async loginWithGitHubUser(usernameOrToken) {
-    if (!usernameOrToken) return null;
-    let cleanUsername = String(usernameOrToken).trim().replace(/^@/, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 39);
-    if (!cleanUsername) return null;
+  // Conecta diretamente com o perfil do GitHub via API oficial
+  async loginWithGitHub(username = DEFAULT_GH_USER) {
+    let cleanUsername = String(username).trim().replace(/^@/, '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 39);
+    if (!cleanUsername) cleanUsername = DEFAULT_GH_USER;
 
     try {
-      // Busca dados reais do usuário na API pública do GitHub
       const response = await fetch(`https://api.github.com/users/${encodeURIComponent(cleanUsername)}`);
       if (response.ok) {
         const data = await response.json();
@@ -81,28 +80,28 @@ class AuthManager {
 
         this.saveUser(userData);
         return userData;
-      } else {
-        throw new Error(`Usuário "${cleanUsername}" não encontrado no GitHub.`);
       }
     } catch (err) {
-      console.error("Erro ao buscar usuário do GitHub:", err);
-      // Fallback gracioso com avatar seguro do GitHub
-      const userData = {
-        id: "github_" + cleanUsername.toLowerCase(),
-        username: cleanUsername,
-        name: cleanUsername,
-        email: `${cleanUsername}@github.com`,
-        avatar: `https://avatars.githubusercontent.com/${cleanUsername}`,
-        provider: "github",
-        providerName: "GitHub",
-        createdAt: new Date().toISOString()
-      };
-      this.saveUser(userData);
-      return userData;
+      console.error("Erro ao carregar dados do GitHub:", err);
     }
+
+    // Fallback gracioso com avatar oficial do GitHub
+    const userData = {
+      id: "github_" + cleanUsername.toLowerCase(),
+      username: cleanUsername,
+      name: cleanUsername,
+      email: `${cleanUsername}@github.com`,
+      avatar: `https://avatars.githubusercontent.com/${cleanUsername}`,
+      profileUrl: `https://github.com/${cleanUsername}`,
+      provider: "github",
+      providerName: "GitHub",
+      createdAt: new Date().toISOString()
+    };
+    this.saveUser(userData);
+    return userData;
   }
 
-  // Inicia o redirecionamento para autorização no GitHub
+  // Inicia o redirecionamento para autorização OAuth no GitHub
   redirectToGitHubOAuth() {
     const scope = encodeURIComponent("read:user user:email");
     const state = encodeURIComponent(JSON.stringify({ provider: "github", from: window.location.pathname }));
@@ -112,7 +111,7 @@ class AuthManager {
     window.location.href = githubAuthUrl;
   }
 
-  // Trata o retorno do GitHub
+  // Trata o retorno do GitHub OAuth
   async handleOAuthCallback() {
     const search = window.location.search.slice(1);
     if (!search) return;
@@ -121,12 +120,7 @@ class AuthManager {
     const code = searchParams.get("code");
 
     if (code) {
-      // Se retornou com código de autorização do GitHub
-      const lastUser = this.getUser();
-      const defaultUser = lastUser ? lastUser.username : "dougretrogames";
-      
-      // Conecta o perfil do GitHub
-      await this.loginWithGitHubUser(defaultUser);
+      await this.loginWithGitHub(DEFAULT_GH_USER);
       this.clearUrlAuthParams();
     }
   }
@@ -184,7 +178,7 @@ function renderAuthHeader() {
   }
 }
 
-// Modal de Login com GitHub
+// Modal de Login com GitHub - Apenas o botão "Conectar com GitHub"
 function openLoginModal() {
   let modal = document.querySelector("#auth-modal");
   if (!modal) {
@@ -194,43 +188,30 @@ function openLoginModal() {
   }
 
   modal.innerHTML = `
-    <div class="modal-card" style="max-width: 440px;">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-          </svg>
-          <h2 style="margin: 0; font-size: 1.25rem;">Conectar com GitHub</h2>
-        </div>
+    <div class="modal-card" style="max-width: 400px; text-align: center; padding: 1.75rem 1.5rem;">
+      <div class="modal-header" style="justify-content: flex-end; border-bottom: none; padding: 0; margin-bottom: 0.5rem;">
         <button class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
       </div>
 
-      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem; line-height: 1.5;">
-        Conecte seu perfil do GitHub para sincronizar sua Dashboard, gerenciar links e acompanhar estatísticas.
-      </p>
-
-      <form onsubmit="handleGitHubSubmit(event)">
-        <div class="form-group labeled-input">
-          <label for="gh-username-input">Seu nome de usuário do GitHub</label>
-          <div class="slug-input-group">
-            <span class="slug-prefix">@</span>
-            <input type="text" id="gh-username-input" placeholder="seu-usuario" value="dougretrogames" required autofocus />
-          </div>
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.15);">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.25rem;">
-          <button type="submit" class="btn btn-primary btn-block" style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8rem 1rem;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-            </svg>
-            <span>Conectar Perfil do GitHub</span>
-          </button>
+        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.35rem; font-weight: 700;">Conectar com GitHub</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5;">
+          Acesse sua conta para sincronizar seus links personalizados e gerenciar estatísticas na Dashboard.
+        </p>
 
-          <button type="button" class="btn btn-secondary btn-block" onclick="window.authManager.redirectToGitHubOAuth()" style="font-size: 0.85rem; padding: 0.65rem 1rem;">
-            Autorizar via OAuth Oficial ↗
-          </button>
-        </div>
-      </form>
+        <button type="button" class="btn btn-primary btn-block" onclick="executeDirectGitHubLogin()" style="display: flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.85rem 1.25rem; font-size: 0.95rem; font-weight: 600;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>Conectar com GitHub</span>
+        </button>
+      </div>
     </div>
   `;
   document.body.appendChild(modal);
@@ -242,12 +223,17 @@ function closeLoginModal() {
   if (modal) modal.style.display = "none";
 }
 
-async function handleGitHubSubmit(e) {
-  e.preventDefault();
-  const username = document.querySelector("#gh-username-input").value.trim();
-  if (!username) return;
+async function executeDirectGitHubLogin() {
+  const btn = document.querySelector("#auth-modal .btn-primary");
+  if (btn) {
+    btn.innerHTML = `
+      <div style="display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+      <span>Conectando...</span>
+    `;
+    btn.disabled = true;
+  }
 
-  const user = await window.authManager.loginWithGitHubUser(username);
+  const user = await window.authManager.loginWithGitHub(DEFAULT_GH_USER);
   if (user) {
     closeLoginModal();
     renderAuthHeader();
