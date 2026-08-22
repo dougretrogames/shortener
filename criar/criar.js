@@ -3,12 +3,12 @@
  * Traduzido e modernizado para Português do Brasil com Verificação de Duplicidade
  */
 
-const STORAGE_KEY = "linklock_saved_custom_links";
+var CRIAR_STORAGE_KEY = "linklock_saved_custom_links";
 
 // Obtém os links salvos do LocalStorage
 function getSavedLinks() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(CRIAR_STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
     console.error("Erro ao acessar LocalStorage:", e);
@@ -28,7 +28,7 @@ function saveToHistory(linkItem) {
       links.unshift(linkItem);
     }
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+    localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
     renderHistory();
   } catch (e) {
     console.error("Erro ao salvar no LocalStorage:", e);
@@ -43,7 +43,7 @@ function deleteHistoryItem(slug) {
   try {
     let links = getSavedLinks();
     links = links.filter(l => l.slug !== slug);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+    localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
     renderHistory();
     checkSlugAvailability();
   } catch (e) {
@@ -57,7 +57,7 @@ function clearAllHistory() {
     return;
   }
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CRIAR_STORAGE_KEY);
     renderHistory();
     checkSlugAvailability();
   } catch (e) {

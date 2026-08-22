@@ -3,8 +3,8 @@
  * Contabiliza acessos, timestamps e estatísticas de uso para a Dashboard
  */
 
-const CLICKS_STORAGE_KEY = "encurtador_clicks_data";
-const STORAGE_KEY = "linklock_saved_custom_links";
+var TRACKER_CLICKS_KEY = "encurtador_clicks_data";
+var TRACKER_SAVED_LINKS_KEY = "linklock_saved_custom_links";
 
 class ClickTracker {
   constructor() {
@@ -13,7 +13,7 @@ class ClickTracker {
 
   loadClicks() {
     try {
-      const data = localStorage.getItem(CLICKS_STORAGE_KEY);
+      const data = localStorage.getItem(TRACKER_CLICKS_KEY);
       return data ? JSON.parse(data) : {};
     } catch {
       return {};
@@ -22,7 +22,7 @@ class ClickTracker {
 
   saveClicks() {
     try {
-      localStorage.setItem(CLICKS_STORAGE_KEY, JSON.stringify(this.clicks));
+      localStorage.setItem(TRACKER_CLICKS_KEY, JSON.stringify(this.clicks));
     } catch (e) {
       console.error("Erro ao salvar cliques:", e);
     }
@@ -74,7 +74,7 @@ class ClickTracker {
   // Atualiza a contagem dentro da lista de links salvos
   updateSavedLinkClickCount(slugKey) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(TRACKER_SAVED_LINKS_KEY);
       if (!raw) return;
 
       const links = JSON.parse(raw);
@@ -90,7 +90,7 @@ class ClickTracker {
       });
 
       if (updated) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+        localStorage.setItem(TRACKER_SAVED_LINKS_KEY, JSON.stringify(links));
       }
     } catch (e) {
       console.error("Erro ao atualizar link salvo:", e);
