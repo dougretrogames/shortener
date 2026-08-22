@@ -110,22 +110,19 @@ function closeDeleteModal() {
 
 // Remove um link do histórico com tela de confirmação e libera o apelido
 function deleteHistoryItem(slug) {
-  openDeleteModal(slug, () => {
+  openDeleteModal(slug, async () => {
     try {
+      // 1. Exclui do banco de dados na nuvem Supabase
+      if (window.supabaseDb && slug) {
+        await window.supabaseDb.deleteLink(slug);
+      }
+
+      // 2. Remove do localStorage local
       let links = getSavedLinks();
       links = links.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
       localStorage.setItem(CRIAR_STORAGE_KEY, JSON.stringify(links));
-      
-      // Limpa do cache em memória para liberar o apelido imediatamente
-      if (globalDbCache && slug) {
-        delete globalDbCache[slug.toLowerCase()];
-      }
 
-      // Exclui do banco de dados na nuvem Supabase
-      if (window.supabaseDb && slug) {
-        window.supabaseDb.deleteLink(slug);
-      }
-
+      // 3. Atualiza a interface e reavalia a disponibilidade na hora
       renderHistory();
       checkSlugAvailability();
 
@@ -144,10 +141,17 @@ function deleteHistoryItem(slug) {
 
 // Limpa todo o histórico de links salvos com tela de confirmação e libera todos os apelidos
 function clearAllHistory() {
-  openDeleteModal(null, () => {
+  openDeleteModal(null, async () => {
     try {
+      const links = getSavedLinks();
+      // Exclui todos os links do Supabase
+      if (window.supabaseDb && links.length > 0) {
+        for (const l of links) {
+          if (l.slug) await window.supabaseDb.deleteLink(l.slug);
+        }
+      }
+
       localStorage.removeItem(CRIAR_STORAGE_KEY);
-      globalDbCache = {};
       renderHistory();
       checkSlugAvailability();
 

@@ -374,11 +374,24 @@ function closeDeleteModal() {
 }
 
 function deleteLink(slug) {
-  openDeleteModal(slug, () => {
-    allLinks = allLinks.filter(l => (l.slug || "").toLowerCase() !== slug.toLowerCase());
-    localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
-    showToast(`Link "/#/${slug}" removido com sucesso.`);
-    loadDashboardData();
+  openDeleteModal(slug, async () => {
+    try {
+      // 1. Remove do Supabase Cloud imediatamente
+      if (window.supabaseDb && slug) {
+        await window.supabaseDb.deleteLink(slug);
+      }
+
+      // 2. Remove do localStorage local
+      allLinks = allLinks.filter(l => (l.slug || "").toLowerCase() !== (slug || "").toLowerCase());
+      localStorage.setItem("linklock_saved_custom_links", JSON.stringify(allLinks));
+
+      // 3. Atualiza interface e estatísticas instantaneamente sem recarregar a página
+      renderStats();
+      filterLinks();
+      showToast(`Link "/#/${slug}" excluído com sucesso.`);
+    } catch (e) {
+      console.error("Erro ao excluir link no painel:", e);
+    }
   });
 }
 

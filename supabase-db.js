@@ -98,10 +98,13 @@ const supabaseDb = {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
         method: "DELETE",
-        headers: this.getHeaders()
+        headers: {
+          ...this.getHeaders(),
+          "Prefer": "return=minimal"
+        }
       });
 
-      return res.ok;
+      return res.ok || res.status === 204 || res.status === 200;
     } catch (e) {
       console.error("[Supabase] Falha ao excluir link:", e);
       return false;
