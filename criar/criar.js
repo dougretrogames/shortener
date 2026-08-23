@@ -242,6 +242,7 @@ async function renderHistory() {
             hint: item.hint || enc.h || "",
             targetUrl: enc.t || enc.u || `Link Protegido (/${item.slug})`,
             outputUrl: `${cleanBaseUrl}${encodeURIComponent(item.slug)}`,
+            clicks: Number(item.clicks) || 0,
             createdAt: item.created_at || new Date().toISOString()
           };
         });
@@ -265,12 +266,18 @@ async function renderHistory() {
   emptyEl.style.display = "none";
   if (clearBtn) clearBtn.style.display = "inline-flex";
 
-  listEl.innerHTML = links.map(item => `
+  listEl.innerHTML = links.map(item => {
+    const clicks = item.clicks || 0;
+    return `
     <div class="history-item">
       <div class="history-info">
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span class="history-slug">/${escapeHtml(item.slug || 'link')}</span>
           ${item.hint ? `<span class="badge" style="background: rgba(99,102,241,0.15); color: #a5b4fc; font-size: 0.7rem;">Dica: ${escapeHtml(item.hint)}</span>` : ''}
+          <a href="../painel/" class="clicks-badge" style="text-decoration: none; font-size: 0.75rem; padding: 0.15rem 0.45rem;" title="Ver gráficos diários e mensais no Painel">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            ${clicks} cliques
+          </a>
         </div>
         <span class="history-target" title="${escapeHtml(item.targetUrl)}">Destino: ${escapeHtml(item.targetUrl)}</span>
         <span class="history-date">Criado em: ${formatDate(item.createdAt)}</span>
@@ -289,7 +296,7 @@ async function renderHistory() {
         </button>
       </div>
     </div>
-  `).join("");
+  `}).join("");
 }
 
 function updateAuthSlugState() {
