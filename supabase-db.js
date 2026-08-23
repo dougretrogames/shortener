@@ -175,14 +175,44 @@ const supabaseDb = {
     }
   },
 
-  // Retorna todos os links criados por um determinado usuário do GitHub ou ID
-  async getUserLinks(usernameOrId) {
-    if (!usernameOrId) return [];
-    const cleanUser = String(usernameOrId).trim().toLowerCase().replace(/^@/, '');
+  // Retorna todos os links criados por um determinado usuário (Google ou GitHub) com isolamento total
+  async getUserLinks(userOrUsername, provider = "", userId = "") {
+    if (!userOrUsername) return [];
     
+    let cleanUser = "";
+    let cleanProvider = "";
+    let cleanId = "";
+
+    if (typeof userOrUsername === "object" && userOrUsername !== null) {
+      cleanUser = String(userOrUsername.username || userOrUsername.name || "").trim().toLowerCase().replace(/^@/, '');
+      cleanProvider = String(userOrUsername.provider || "").trim().toLowerCase();
+      cleanId = String(userOrUsername.id || "").trim();
+    } else {
+      cleanUser = String(userOrUsername).trim().toLowerCase().replace(/^@/, '');
+      cleanProvider = String(provider || "").trim().toLowerCase();
+      cleanId = String(userId || "").trim();
+    }
+
     try {
-      // Consulta direta pelo campo JSONB author_username no PostgreSQL do Supabase
-      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?encrypted_data->>author_username=eq.${encodeURIComponent(cleanUser)}&select=*&order=created_at.desc`;
+      // 1. Se possuir o ID único de autenticação (UUID do Supabase), busca por author_id com precisão máxima
+      if (cleanId) {
+        const idEndpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?encrypted_data->>author_id=eq.${encodeURIComponent(cleanId)}&select=*&order=created_at.desc`;
+        const resId = await fetch(idEndpoint, { method: "GET", headers: this.getHeaders() });
+        if (resId.ok) {
+          const idData = await resId.json();
+          if (Array.isArray(idData) && idData.length > 0) {
+            return idData;
+          }
+        }
+      }
+
+      // 2. Consulta por author_username e author_type combinados
+      let endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?encrypted_data->>author_username=eq.${encodeURIComponent(cleanUser)}`;
+      if (cleanProvider) {
+        endpoint += `&encrypted_data->>author_type=eq.${encodeURIComponent(cleanProvider)}`;
+      }
+      endpoint += `&select=*&order=created_at.desc`;
+
       const res = await fetch(endpoint, {
         method: "GET",
         headers: this.getHeaders()
@@ -198,15 +228,27 @@ const supabaseDb = {
       console.warn("[Supabase] Consulta direta por usuário falhou, tentando fallback:", e);
     }
 
-    // Fallback inteligente: obtém os links e filtra pela conta do criador
+    // Fallback inteligente: obtém os links e filtra pela conta e provedor do criador
     try {
       const all = await this.getAllLinks();
       return all.filter(item => {
         const enc = (item.encrypted_data && typeof item.encrypted_data === "object") ? item.encrypted_data : {};
         const encUser = (enc.author_username || "").toLowerCase();
+        const encType = (enc.author_type || item.author_type || "github").toLowerCase();
         const encId = enc.author_id || "";
         
-        return encUser === cleanUser || encId === cleanUser || (cleanUser === "dougretrogames" && (!encUser || encUser === "dougretrogames"));
+        // Correspondência por ID
+        if (cleanId && encId === cleanId) return true;
+
+        // Correspondência por username + provedor
+        if (cleanUser && encUser === cleanUser) {
+          if (!cleanProvider) return true;
+          return encType === cleanProvider || (cleanProvider === "github" && (!enc.author_type || encType === "github"));
+        }
+        
+        // Suporte legado
+        if (cleanUser === "dougretrogames" && (!encUser || encUser === "dougretrogames")) return true;
+        return false;
       });
     } catch (e) {
       console.warn("[Supabase] Falha no fallback de links do usuário:", e);

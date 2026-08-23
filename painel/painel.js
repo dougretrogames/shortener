@@ -71,7 +71,7 @@ async function loadDashboardData() {
 
   try {
     // Carrega dados EXCLUSIVAMENTE do banco de dados Supabase para a conta conectada
-    const remoteList = await window.supabaseDb.getUserLinks(userIdentifier);
+    const remoteList = await window.supabaseDb.getUserLinks(user || userIdentifier);
 
     if (Array.isArray(remoteList)) {
       const baseUrl = new URL('../', window.location.href).href;
