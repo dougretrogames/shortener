@@ -4,6 +4,7 @@
  */
 
 let myLinks = [];
+let thirdPartyLinks = [];
 let allSystemLinks = [];
 let allLinks = [];
 let filteredLinks = [];
@@ -12,6 +13,7 @@ let currentTab = "my-links"; // "my-links" | "admin-all" | "admin-users"
 let selectedSlugs = new Set();
 
 window.myLinks = myLinks;
+window.thirdPartyLinks = thirdPartyLinks;
 window.allSystemLinks = allSystemLinks;
 window.allLinks = allLinks;
 window.filteredLinks = filteredLinks;
@@ -215,15 +217,7 @@ async function loadDashboardData() {
   }
 
   try {
-    // 1. Carrega os links do próprio usuário logado
-    const personalRemote = await window.supabaseDb.getUserLinks(user || userIdentifier);
-    if (Array.isArray(personalRemote)) {
-      myLinks = personalRemote.map(r => mapRemoteRecord(r, user));
-    } else {
-      myLinks = [];
-    }
-
-    // 2. Se for o administrador @dougretrogames, carrega TODOS os links do banco
+    // 1. Se for o administrador, carrega TODOS os links do banco e separa
     if (isAdmin) {
       const allRemote = await window.supabaseDb.getAllLinks();
       if (Array.isArray(allRemote)) {
@@ -232,10 +226,22 @@ async function loadDashboardData() {
         allSystemLinks = [];
       }
 
-      // Agrupa usuários únicos
+      // Separação estrita: Meus links vs Links de terceiros
+      myLinks = allSystemLinks.filter(r => isLinkOwner(r, user));
+      thirdPartyLinks = allSystemLinks.filter(r => !isLinkOwner(r, user));
+
+      // Agrupa usuários de terceiros para filtros e cards
       buildUniqueUsersList();
       populateUserFilterDropdown();
     } else {
+      // Usuário comum: carrega apenas os próprios links
+      const personalRemote = await window.supabaseDb.getUserLinks(user || userIdentifier);
+      if (Array.isArray(personalRemote)) {
+        myLinks = personalRemote.map(r => mapRemoteRecord(r, user));
+      } else {
+        myLinks = [];
+      }
+      thirdPartyLinks = [];
       allSystemLinks = [...myLinks];
     }
 
@@ -245,19 +251,20 @@ async function loadDashboardData() {
     const usersCountEl = document.querySelector("#tab-admin-users-count");
 
     if (myCountEl) myCountEl.innerText = myLinks.length;
-    if (allCountEl) allCountEl.innerText = allSystemLinks.length;
+    if (allCountEl) allCountEl.innerText = thirdPartyLinks.length;
     if (usersCountEl) usersCountEl.innerText = uniqueUsersList.length;
 
     // Define os links atuais da aba selecionada
     if (currentTab === "my-links") {
       allLinks = myLinks;
     } else if (currentTab === "admin-all") {
-      allLinks = allSystemLinks;
+      allLinks = thirdPartyLinks;
     } else {
-      allLinks = allSystemLinks;
+      allLinks = thirdPartyLinks;
     }
 
     window.myLinks = myLinks;
+    window.thirdPartyLinks = thirdPartyLinks;
     window.allSystemLinks = allSystemLinks;
     window.allLinks = allLinks;
 
@@ -275,6 +282,7 @@ async function loadDashboardData() {
   } catch (e) {
     console.error("[Supabase] Erro ao carregar dados do banco:", e);
     myLinks = [];
+    thirdPartyLinks = [];
     allSystemLinks = [];
     allLinks = [];
     renderStats();
@@ -282,11 +290,11 @@ async function loadDashboardData() {
   }
 }
 
-// Constrói a lista analítica de usuários
+// Constrói a lista analítica de usuários de terceiros
 function buildUniqueUsersList() {
   const usersMap = new Map();
 
-  allSystemLinks.forEach(link => {
+  thirdPartyLinks.forEach(link => {
     const rawUser = link.authorUsername || "visitante";
     const cleanUser = rawUser.toLowerCase().replace(/^@/, '');
     const provider = link.authorType || "visitante";
@@ -372,15 +380,15 @@ function switchDashboardTab(tab) {
     renderStats();
     filterLinks();
   } else if (tab === "admin-all") {
-    allLinks = allSystemLinks;
-    if (statLabelLinks) statLabelLinks.innerText = "Links no Sistema";
+    allLinks = thirdPartyLinks;
+    if (statLabelLinks) statLabelLinks.innerText = "Links de Terceiros";
     if (tableViewSection) tableViewSection.style.display = "block";
     if (usersViewSection) usersViewSection.style.display = "none";
     if (thCheckbox) thCheckbox.style.display = "table-cell";
     renderStats();
     filterLinks();
   } else if (tab === "admin-users") {
-    allLinks = allSystemLinks;
+    allLinks = thirdPartyLinks;
     if (tableViewSection) tableViewSection.style.display = "none";
     if (usersViewSection) usersViewSection.style.display = "block";
     renderStats();
