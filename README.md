@@ -2,7 +2,7 @@
 
 > **Encurtador de links moderno e protetor de URLs com senha usando criptografia militar AES-256 diretamente no navegador.**
 
-O **Shortener** é uma aplicação web completa que une o melhor dos dois mundos: um **encurtador de links profissional** (com apelidos personalizados ou códigos aleatórios limpos de 5 dígitos) e um **sistema seguro de proteção de URLs por senha**, com **painel de controle (Dashboard)**, **contador de cliques em tempo real**, **banco de dados em nuvem Supabase**, **autenticação oficial via GitHub** e interface moderna com tema escuro 100% responsiva para desktop e dispositivos móveis.
+O **Shortener** é uma aplicação web completa que une o melhor dos dois mundos: um **encurtador de links profissional** (com apelidos personalizados ou códigos aleatórios limpos de 5 dígitos) e um **sistema seguro de proteção de URLs por senha**, com **painel de controle (Dashboard)**, **contador de cliques em tempo real**, **banco de dados em nuvem Supabase**, **autenticação oficial via Google e GitHub** e interface moderna com tema escuro 100% responsiva para desktop e dispositivos móveis.
 
 [👉 Acesse o Repositório no GitHub](https://github.com/dougretrogames/shortener) | [🚀 Teste a Aplicação Online](https://dougretrogames.github.io/shortener/criar/)
 
@@ -27,10 +27,12 @@ O **Shortener** é uma aplicação web completa que une o melhor dos dois mundos
 - Links criados ficam imediatamente disponíveis em escala global (~50ms de latência) sem necessidade de commits no repositório.
 - Armazena exclusivamente o conteúdo criptografado (*ciphertext*), garantindo privacidade total mesmo para quem administra o banco de dados.
 
-### 4. 🔑 Autenticação com GitHub & Painel de Controle (`/painel`)
-- **Login OAuth Oficial:** Conecte sua conta do GitHub com fluxo seguro PKCE.
+### 4. 🔑 Autenticação Multiprovedor (Google & GitHub) & Painel de Controle (`/painel`)
+- **Login OAuth Oficial:** Conecte sua conta do Google ou do GitHub com fluxo seguro PKCE.
+- **Isolamento de Contas:** Cada usuário visualiza exclusivamente os links criados por sua respectiva conta (`author_id`).
 - **Métricas e KPIs:** Monitore contador de cliques em tempo real, links mais acessados e data de criação.
-- **Coluna Fixa de Ações:** Botões de copiar, testar, editar e excluir permanentemente links sempre acessíveis sem depender de scroll horizontal.
+- **Painel de Administrador Geral:** Visualização central de todos os links e usuários registrados, com ícones de identificação por provedor (Google/GitHub) e ferramentas de exclusão individual ou em lote com checkboxes.
+- **Coluna Fixa de Ações:** Botões de copiar, testar, editar e excluir permanentemente links sempre acessíveis.
 - **Exportação de Dados:** Exporte seus relatórios completos em formato **JSON** ou **CSV** com sanitização contra fórmulas maliciosas.
 
 ### 5. 📱 Interface Responsiva & Recursos Extras
@@ -41,7 +43,7 @@ O **Shortener** é uma aplicação web completa que une o melhor dos dois mundos
 
 ## 🛠️ Passo a Passo: Como Integrar com o Supabase (Para quem clonar o projeto)
 
-Se você clonou este repositório e deseja hospedar sua própria versão com banco de dados em nuvem e login pelo GitHub, siga o passo a passo abaixo:
+Se você clonou este repositório e deseja hospedar sua própria versão com banco de dados em nuvem e autenticação via **Google** e **GitHub**, siga o passo a passo abaixo:
 
 ### Passo 1: Criar uma Conta e um Projeto no Supabase
 1. Acesse [supabase.com](https://supabase.com) e crie uma conta gratuita.
@@ -56,12 +58,14 @@ Se você clonou este repositório e deseja hospedar sua própria versão com ban
 2. Clique em **"New Query"**, cole o script SQL abaixo e clique em **"Run"** (ou `Ctrl + Enter`):
 
 ```sql
--- 1. Criação da tabela principal de links encurtados
+-- 1. Criação da tabela principal de links encurtados com suporte a author_id
 CREATE TABLE IF NOT EXISTS public.short_links (
     slug TEXT PRIMARY KEY,
     encrypted_data JSONB NOT NULL,
     author_type TEXT DEFAULT 'visitante',
+    author_username TEXT DEFAULT '',
     author_name TEXT DEFAULT 'Visitante',
+    author_id TEXT DEFAULT '',
     hint TEXT DEFAULT '',
     clicks BIGINT DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -94,32 +98,70 @@ USING (true);
 
 ---
 
-### Passo 3: Configurar a Autenticação com GitHub (OAuth)
+### Passo 3: Configurar Autenticação com a Conta Google (Google Cloud + Supabase)
+
+Para permitir que os usuários façam login com a conta Google:
+
+#### A. Obter a Callback URL no Supabase
+1. No painel do seu projeto no Supabase, vá em **Authentication** > **Providers** > **Google**.
+2. Copie o valor do campo **Callback URL (for OAuth)** (formato: `https://<seu-projeto>.supabase.co/auth/v1/callback`). Mantenha essa aba aberta.
+
+#### B. Criar as Credenciais no Google Cloud Console
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/).
+2. Crie um novo projeto ou selecione um existente.
+3. No menu lateral, acesse **APIs e Serviços** > **Tela de consentimento OAuth** (OAuth consent screen):
+   - Escolha o tipo de usuário **Externo** (External) e clique em **Criar**.
+   - Preencha o **Nome do app** (ex: `Shortener`), o **E-mail de suporte do usuário** e o **E-mail de contato do desenvolvedor**.
+   - Clique em **Salvar e continuar** nas etapas seguintes até finalizar.
+   - Em **Status de publicação**, clique em **Publicar aplicativo** (Publish App) para permitir o login de qualquer conta Google.
+4. No menu lateral, acesse **APIs e Serviços** > **Credenciais** (Credentials):
+   - Clique em **+ Criar Credenciais** (+ Create Credentials) > **ID do cliente OAuth** (OAuth client ID).
+   - Em **Tipo de aplicativo**, selecione **Aplicativo da Web** (Web application).
+   - Em **Nome**, digite `Shortener Web Client`.
+   - Em **Origens JavaScript autorizadas** (Authorized JavaScript origins), adicione:
+     - `http://localhost:8000` (para testes locais)
+     - `https://seu-usuario.github.io` (URL base do seu GitHub Pages, sem barra no final)
+   - Em **URIs de redirecionamento autorizados** (Authorized redirect URIs), adicione:
+     - A **Callback URL** que você copiou do Supabase no passo anterior (ex: `https://<seu-projeto>.supabase.co/auth/v1/callback`).
+   - Clique em **Criar**.
+5. Uma janela exibirá seu **ID do cliente** (Client ID) e a **Chave secreta do cliente** (Client Secret). Copie ambos.
+
+#### C. Ativar o Provedor Google no Supabase
+1. Volte ao Supabase em **Authentication** > **Providers** > **Google**.
+2. Marque a opção **"Enable Google"**.
+3. Cole o **Client ID** e o **Client Secret** obtidos no Google Cloud.
+4. Clique em **Save**.
+
+---
+
+### Passo 4: Configurar Autenticação com GitHub (OAuth)
 1. **Criar OAuth App no GitHub:**
    - Acesse o GitHub em **Settings** > **Developer settings** > **OAuth Apps** > **New OAuth App**.
    - **Application name:** `Shortener`
    - **Homepage URL:** URL do seu site (ex: `https://seu-usuario.github.io/shortener/` ou `http://localhost:8000/`)
-   - **Authorization callback URL:** Obtenha no Supabase em **Authentication** > **Providers** > **GitHub** > campo **Callback URL (for OAuth)** (formato: `https://<seu-projeto>.supabase.co/auth/v1/callback`).
+   - **Authorization callback URL:** Obtenha no Supabase em **Authentication** > **Providers** > **GitHub** > campo **Callback URL (for OAuth)** (`https://<seu-projeto>.supabase.co/auth/v1/callback`).
    - Clique em **Register application**.
    - Gere um **Client Secret** e copie o **Client ID** e o **Client Secret**.
 
-2. **Ativar o Provedor no Supabase:**
+2. **Ativar o Provedor GitHub no Supabase:**
    - No painel do Supabase, vá em **Authentication** > **Providers** > **GitHub**.
    - Ative a opção **"Enable GitHub"**.
-   - Cole o **Client ID** e o **Client Secret** gerados no GitHub.
-   - Clique em **Save**.
-
-3. **Configurar URLs de Redirecionamento no Supabase:**
-   - Em **Authentication** > **URL Configuration**:
-   - Defina o **Site URL** com o endereço principal (ex: `https://seu-usuario.github.io/shortener/`).
-   - Em **Redirect URLs**, adicione todas as URLs autorizadas:
-     - `http://localhost:8000/**`
-     - `https://seu-usuario.github.io/shortener/**`
+   - Cole o **Client ID** e o **Client Secret**.
    - Clique em **Save**.
 
 ---
 
-### Passo 4: Conectar o Código ao seu Supabase
+### Passo 5: Configurar URLs de Redirecionamento no Supabase
+1. Em **Authentication** > **URL Configuration**:
+2. Defina o **Site URL** com o endereço principal (ex: `https://seu-usuario.github.io/shortener/`).
+3. Em **Redirect URLs**, adicione todas as URLs autorizadas do seu ambiente:
+   - `http://localhost:8000/**`
+   - `https://seu-usuario.github.io/shortener/**`
+4. Clique em **Save**.
+
+---
+
+### Passo 6: Conectar o Código ao seu Supabase
 1. No Supabase, vá em **Project Settings** > **API**.
 2. Copie a **Project URL** (`https://xxxxxxxx.supabase.co`) e a chave **Project API Keys (anon public)**.
 3. Abra o arquivo [`supabase-db.js`](supabase-db.js) no seu projeto e atualize as constantes:
@@ -130,7 +172,7 @@ const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";
 const SUPABASE_ANON_KEY = "SUA_CHAVE_ANONIMA_PUBLICA_AQUI";
 ```
 
-Pronto! Seu projeto agora está totalmente conectado e funcional com seu próprio banco de dados e autenticação.
+Pronto! Seu projeto agora está totalmente conectado e funcional com autenticação via Google, GitHub e banco de dados na nuvem.
 
 ---
 
@@ -174,7 +216,8 @@ Acesse `http://localhost:8000` no seu navegador.
 | **Formato de Rota** | URLs Limpas (`/apelido` e `/5digitos` via SPA fallback 404) |
 | **Gerador Aleatório** | 5 caracteres únicos sem repetição (pool de 60 chars sem `I` e `l`) |
 | **Banco de Dados** | Supabase Cloud Database (REST API em tempo real) |
-| **Autenticação** | GitHub OAuth com suporte a PKCE |
+| **Autenticação** | Google OAuth & GitHub OAuth com suporte a PKCE |
+| **Painel de Controle** | Gestão de Links, Métricas de Cliques, Dashboard de Administrador e Ações em Lote |
 | **Compatibilidade** | Chrome, Edge, Firefox, Safari, Opera, iOS Safari, Android Chrome |
 
 ---
