@@ -356,8 +356,8 @@ function normalizeSlug(str) {
 // Obtém o conjunto de TODOS os links existentes (Supabase Nuvem como autoridade principal)
 async function getAllExistingSlugs() {
   const slugSet = new Set([
-    "criar", "painel", "descriptografar", "favoritos-ocultos",
-    "forca-bruta", "index.html", "404.html", "shortener", "encurtador"
+    "criar", "painel", "descriptografar",
+    "index.html", "404.html", "shortener", "encurtador"
   ]);
 
   // 1. Supabase (Nuvem em tempo real - Fonte Única de Verdade)
@@ -718,13 +718,6 @@ async function onEncrypt() {
     const slugDbInfo = document.querySelector("#slug-db-info");
     if (slugDbInfo) {
       slugDbInfo.style.display = customSlug ? "block" : "none";
-    }
-
-    // Ajusta o link de "Favorito Oculto"
-    const bookmarkLink = document.querySelector("#bookmark");
-    if (bookmarkLink) {
-      const hiddenBaseUrl = new URL('../favoritos-ocultos/', window.location.href).href;
-      bookmarkLink.href = `${hiddenBaseUrl}#${rawHash}`;
     }
 
     // Ajusta o link de "Testar Link"

@@ -32,8 +32,8 @@ function extractTargetFromLocation() {
   const pathname = window.location.pathname || "";
   const segments = pathname.split("/").filter(s => s && s.trim() !== "");
   const reservedPages = [
-    "criar", "painel", "descriptografar", "favoritos-ocultos",
-    "forca-bruta", "index.html", "404.html", "shortener", "encurtador"
+    "criar", "painel", "descriptografar",
+    "index.html", "404.html", "shortener", "encurtador"
   ];
 
   if (segments.length > 0) {
@@ -270,15 +270,10 @@ async function main() {
         // Senha incorreta
         error("Senha incorreta. Verifique a digitação e tente novamente.");
 
-        // Atualiza links de ajuda para a mesma hash
+        // Atualiza link de ajuda para a mesma hash
         const noRedirect = document.querySelector("#no-redirect");
         if (noRedirect) {
           noRedirect.href = `./descriptografar/#${rawHash}`;
-        }
-
-        const hiddenLink = document.querySelector("#hidden");
-        if (hiddenLink) {
-          hiddenLink.href = `./favoritos-ocultos/#${rawHash}`;
         }
         return;
       }

@@ -94,6 +94,9 @@ class AuthManager {
 
         this.saveUser(userData);
         await migrateVisitorLinksToAccount(userData);
+        if (!window.location.pathname.includes("/painel")) {
+          window.location.href = getRelativePathTo("painel");
+        }
         return { success: true, user: userData };
       }
     } catch (err) {
@@ -115,6 +118,9 @@ class AuthManager {
 
     this.saveUser(userData);
     await migrateVisitorLinksToAccount(userData);
+    if (!window.location.pathname.includes("/painel")) {
+      window.location.href = getRelativePathTo("painel");
+    }
     return { success: true, user: userData };
   }
 
@@ -287,12 +293,13 @@ function handleAuthLogout() {
   }
 }
 
-// Redireciona diretamente para o fluxo oficial de autorização OAuth do GitHub
+// Redireciona diretamente para o fluxo oficial de autorização OAuth do GitHub apontando diretamente para o Painel
 async function loginWithGitHubOAuth() {
-  const currentUrl = window.location.href.split('#')[0].split('?')[0];
+  const painelRel = getRelativePathTo("painel");
+  const targetRedirect = new URL(painelRel, window.location.href).href;
   const authUrl = window.supabaseDb 
-    ? await window.supabaseDb.getOAuthUrl("github", currentUrl)
-    : `https://nmqzjcriwggemfawpjqc.supabase.co/auth/v1/authorize?provider=github&redirect_to=${encodeURIComponent(currentUrl)}`;
+    ? await window.supabaseDb.getOAuthUrl("github", targetRedirect)
+    : `https://nmqzjcriwggemfawpjqc.supabase.co/auth/v1/authorize?provider=github&redirect_to=${encodeURIComponent(targetRedirect)}`;
   window.location.href = authUrl;
 }
 
@@ -321,7 +328,7 @@ function openLoginModal() {
 
         <h2 style="margin: 0 0 0.5rem 0; font-size: 1.4rem; font-weight: 700; color: #fff;">Entrar com GitHub</h2>
         <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1.75rem; line-height: 1.55;">
-          Você será direcionado para o GitHub para autorizar o acesso à sua conta e sincronizar seus links personalizados no Painel.
+          Você será direcionado para o GitHub para autorizar o acesso à sua conta e acessar seu Painel de Controle de links.
         </p>
 
         <button type="button" id="gh-oauth-btn" class="btn btn-github btn-block" onclick="loginWithGitHubOAuth()" style="display: flex; align-items: center; justify-content: center; gap: 0.65rem; padding: 0.85rem 1.25rem; font-size: 1rem; font-weight: 600;">
@@ -374,11 +381,15 @@ async function applyUserSession(data, accessToken, refreshToken) {
   window.history.replaceState(null, document.title, cleanUrl);
 
   renderAuthHeader();
-  if (window.location.pathname.includes("/painel") && typeof initDashboard === "function") {
-    initDashboard();
+
+  // Sempre redireciona para o Painel após o login com sucesso caso não esteja nele
+  if (!window.location.pathname.includes("/painel")) {
+    window.location.href = getRelativePathTo("painel");
+    return;
   }
-  if (window.location.pathname.includes("/criar") && typeof updateAuthSlugState === "function") {
-    updateAuthSlugState();
+
+  if (typeof initDashboard === "function") {
+    initDashboard();
   }
 }
 
@@ -486,8 +497,6 @@ document.addEventListener("click", (e) => {
 function getRelativePathTo(target) {
   const depth = window.location.pathname.includes("/criar") || 
                 window.location.pathname.includes("/descriptografar") || 
-                window.location.pathname.includes("/favoritos-ocultos") || 
-                window.location.pathname.includes("/forca-bruta") || 
                 window.location.pathname.includes("/painel") ? "../" : "./";
   return depth + target;
 }

@@ -311,14 +311,14 @@ body {
   display: inline;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px), (orientation: landscape) and (max-height: 550px) {
   .site-header {
     width: 100%;
     overflow-x: clip;
   }
 
   .header-container {
-    padding: 0.45rem 0.65rem !important;
+    padding: 0.45rem 0.75rem !important;
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
@@ -478,6 +478,9 @@ body {
     box-shadow: var(--shadow-lg);
     animation: slideDownNav 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 999;
+    max-height: calc(100vh - 55px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .site-header.mobile-nav-open nav {
@@ -1297,23 +1300,8 @@ footer a:hover {
    Responsividade Avançada & Adaptação para Telas Móveis
    ========================================================================== */
 
-/* Telas médias e Tablets */
-@media (max-width: 1060px) {
-  .header-container {
-    padding: 0.75rem 1rem;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0.65rem;
-  }
-
-  .nav-links {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
+/* Telas médias e Tablets em modo desktop */
+@media (min-width: 861px) and (max-width: 1060px) and (min-height: 551px) {
   .nav-link {
     padding: 0.35rem 0.55rem;
     font-size: 0.8rem;
@@ -1321,24 +1309,6 @@ footer a:hover {
 }
 
 @media (max-width: 640px) {
-  .header-container {
-    padding: 0.6rem 0.85rem;
-  }
-
-  .nav-links {
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 0.25rem 0;
-  }
-
-  .nav-links::-webkit-scrollbar {
-    display: none;
-  }
-}
-
   .main-content {
     margin: 1.25rem auto;
     padding: 0 1rem;

@@ -34,10 +34,8 @@ O **Shortener** é uma aplicação web completa que une o melhor dos dois mundos
 - **Exportação de Dados:** Exporte seus relatórios completos em formato **JSON** ou **CSV** com sanitização contra fórmulas maliciosas.
 
 ### 5. 📱 Interface Responsiva & Recursos Extras
-- Cabeçalho mobile alinhado em linha única com menu hambúrguer ultra-rápido.
-- **Descriptografar Manual (`/descriptografar`):** Inspecione destinos sem redirecionamento automático.
-- **Favoritos Ocultos (`/favoritos-ocultos`):** Crie marcadores disfarçados para a barra de favoritos.
-- **Teste de Força Bruta (`/forca-bruta`):** Demonstração educacional de segurança criptográfica.
+- Cabeçalho mobile alinhado em linha única com menu hambúrguer ultra-rápido (suporte otimizado para modo retrato e paisagem).
+- **Descriptografar Manual (`/descriptografar`):** Inspecione URLs de destino sem redirecionamento automático do navegador.
 
 ---
 
