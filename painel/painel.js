@@ -151,9 +151,38 @@ function mapRemoteRecord(remote, user) {
     authorType: authorType,
     authorUsername: authorUsername,
     authorName: authorName,
+    authorId: remote.author_id || enc.author_id || null,
     isPasswordProtected: isPasswordProtected,
     createdAt: remote.created_at || new Date().toISOString()
   };
+}
+
+// Verifica se o usuário autenticado é o criador legítimo do link
+function isLinkOwner(link, user) {
+  if (!link || !user) return false;
+
+  const currentProvider = String(user.provider || "github").toLowerCase();
+  const currentUsername = String(user.username || user.name || "").toLowerCase().replace(/^@/, '');
+  const currentId = user.id || `${currentProvider}_${currentUsername}`;
+
+  const enc = (link.encryptedData && typeof link.encryptedData === "object") ? link.encryptedData : {};
+  const linkAuthorType = String(link.authorType || enc.author_type || "").toLowerCase();
+  const linkAuthorUsername = String(link.authorUsername || enc.author_username || "").toLowerCase().replace(/^@/, '');
+  const linkAuthorId = String(link.authorId || enc.author_id || "");
+
+  // 1. Verificação direta pelo ID único da conta
+  if (currentId && linkAuthorId && currentId === linkAuthorId) {
+    return true;
+  }
+
+  // 2. Verificação pelo username e provedor
+  if (currentUsername && linkAuthorUsername && currentUsername === linkAuthorUsername) {
+    if (!linkAuthorType || linkAuthorType === currentProvider) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function loadDashboardData() {
@@ -486,6 +515,7 @@ function renderLinksTable() {
     const authorDisplay = `@${cleanUser}`;
     const dateFormatted = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recente";
     const isChecked = selectedSlugs.has(slug);
+    const canEdit = isLinkOwner(link, user);
 
     html += `
       <tr style="${isChecked ? 'background: rgba(56, 189, 248, 0.08);' : ''}">
@@ -552,9 +582,11 @@ function renderLinksTable() {
             <a href="${escapeHtml(link.outputUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Testar / Abrir Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </a>
-            <button class="btn btn-secondary btn-sm" onclick="openEditModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Editar Link">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            </button>
+            ${canEdit ? `
+              <button class="btn btn-secondary btn-sm" onclick="openEditModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Editar Meu Link">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+            ` : ''}
             <button class="btn btn-danger btn-sm" onclick="deleteLink(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Excluir Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
@@ -723,6 +755,12 @@ async function deleteSelectedBatchLinks() {
 function openEditModal(slug) {
   const link = allLinks.find(l => (l.slug || "").toLowerCase() === slug.toLowerCase());
   if (!link) return;
+
+  const user = window.authManager ? window.authManager.getUser() : null;
+  if (!isLinkOwner(link, user)) {
+    alert("Privilégio restrito: Administradores só possuem permissão para excluir links de terceiros, não para editar URLs ou alterar senhas de outros usuários.");
+    return;
+  }
 
   document.querySelector("#edit-original-slug").value = link.slug;
   document.querySelector("#edit-slug").value = link.slug;
@@ -904,6 +942,12 @@ async function saveEditedLink(e) {
 
   const link = allLinks.find(l => (l.slug || "").toLowerCase() === originalSlug.toLowerCase());
   if (!link) return;
+
+  const user = window.authManager ? window.authManager.getUser() : null;
+  if (!isLinkOwner(link, user)) {
+    alert("Operação não permitida: Você só possui permissão para excluir links de outros usuários, não para editá-los ou alterar suas senhas.");
+    return;
+  }
 
   const originalBtnHtml = saveBtn ? saveBtn.innerHTML : "";
   if (saveBtn) {
