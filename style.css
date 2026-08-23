@@ -1943,3 +1943,104 @@ footer a:hover {
   text-align: center;
 }
 
+/* 2FA / TOTP Styles */
+.twofa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.twofa-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.twofa-badge.active:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.twofa-badge.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.twofa-badge.warning:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.6);
+}
+
+.twofa-qr-box {
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  margin: 1rem auto;
+}
+
+.twofa-qr-box img {
+  width: 190px;
+  height: 190px;
+  display: block;
+}
+
+.twofa-secret-box {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88rem;
+  color: #38bdf8;
+  word-break: break-all;
+}
+
+.otp-pin-input {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 1.8rem !important;
+  letter-spacing: 0.45em !important;
+  text-align: center !important;
+  padding: 0.75rem 1rem !important;
+  max-width: 280px;
+  margin: 0 auto;
+  border: 2px solid rgba(56, 189, 248, 0.4) !important;
+  border-radius: var(--radius-md) !important;
+  color: #38bdf8 !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+
+.otp-pin-input:focus {
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
+}
+
+.twofa-step-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+

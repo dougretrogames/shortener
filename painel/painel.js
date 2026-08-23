@@ -67,6 +67,7 @@ function initDashboard() {
 function updateSessionInfo() {
   const user = window.authManager.getUser();
   const sessionBadge = document.querySelector("#session-badge");
+  const admin2faBadge = document.querySelector("#admin-2fa-badge");
   const dashboardTitle = document.querySelector("#dashboard-title");
   const dashboardSubtitle = document.querySelector("#dashboard-subtitle");
   const isAdmin = isAdminUser(user);
@@ -81,6 +82,25 @@ function updateSessionInfo() {
         sessionBadge.innerText = `Conectado via ${user.providerName || 'GitHub'} (@${user.username || user.name})`;
       }
     }
+
+    if (admin2faBadge) {
+      if (isAdmin) {
+        admin2faBadge.style.display = "inline-flex";
+        const is2FA = window.TOTP && window.TOTP.is2FAEnabled();
+        if (is2FA) {
+          admin2faBadge.className = "twofa-badge active";
+          admin2faBadge.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg><span>2FA Ativo 🔒</span>`;
+          admin2faBadge.title = "Verificação em Duas Etapas configurada com Microsoft Authenticator. Clique para gerenciar.";
+        } else {
+          admin2faBadge.className = "twofa-badge warning";
+          admin2faBadge.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><span>Ativar 2FA (Recomendado)</span>`;
+          admin2faBadge.title = "Clique para configurar a verificação em duas etapas no Microsoft Authenticator.";
+        }
+      } else {
+        admin2faBadge.style.display = "none";
+      }
+    }
+
     const nameDisplay = user.name && user.name !== user.username ? `${user.name} (@${user.username})` : `@${user.username || user.name}`;
     if (dashboardTitle) {
       dashboardTitle.innerText = isAdmin ? `Painel do Administrador` : `Olá, ${nameDisplay}!`;
@@ -285,8 +305,18 @@ function populateUserFilterDropdown() {
   }
 }
 
+let currentSetupSecret = "";
+let targetTabAfter2FA = "admin-all";
+
 // Alternador de Abas do Dashboard
 function switchDashboardTab(tab) {
+  // Se for acessar abas de administrador geral e o 2FA estiver ativado mas a sessão ainda não validada, exige código
+  if ((tab === "admin-all" || tab === "admin-users") && window.TOTP && window.TOTP.is2FAEnabled() && !window.TOTP.isSessionVerified()) {
+    targetTabAfter2FA = tab;
+    open2FAChallengeModal();
+    return;
+  }
+
   currentTab = tab;
   deselectAllLinks();
 
@@ -1138,6 +1168,183 @@ function escapeHtml(string) {
     .replace(/'/g, "&#039;");
 }
 
+// ==========================================
+// Funções de Verificação em Duas Etapas (2FA)
+// ==========================================
+function handle2FABadgeClick() {
+  if (window.TOTP && window.TOTP.is2FAEnabled()) {
+    open2FAManageModal();
+  } else {
+    open2FASetupModal();
+  }
+}
+
+function open2FASetupModal() {
+  close2FAManageModal();
+  close2FAChallengeModal();
+
+  if (!window.TOTP) return;
+
+  const user = window.authManager ? window.authManager.getUser() : null;
+  const username = user ? (user.username || user.name || "dougretrogames") : "dougretrogames";
+
+  currentSetupSecret = window.TOTP.getSavedSecret() || window.TOTP.generateSecret(32);
+  const otpAuthUrl = window.TOTP.getOtpAuthUrl(currentSetupSecret, username);
+  const qrUrl = window.TOTP.getQrCodeUrl(otpAuthUrl);
+
+  const qrImg = document.querySelector("#twofa-setup-qr");
+  const secretSpan = document.querySelector("#twofa-setup-secret");
+  const pinInput = document.querySelector("#twofa-setup-pin");
+  const errorDiv = document.querySelector("#twofa-setup-error");
+
+  if (qrImg) qrImg.src = qrUrl;
+  if (secretSpan) secretSpan.innerText = currentSetupSecret;
+  if (pinInput) pinInput.value = "";
+  if (errorDiv) {
+    errorDiv.style.display = "none";
+    errorDiv.innerText = "";
+  }
+
+  const modal = document.querySelector("#modal-2fa-setup");
+  if (modal) modal.style.display = "flex";
+
+  setTimeout(() => {
+    if (pinInput) pinInput.focus();
+  }, 100);
+}
+
+function close2FASetupModal() {
+  const modal = document.querySelector("#modal-2fa-setup");
+  if (modal) modal.style.display = "none";
+}
+
+function copy2FASecret() {
+  if (!currentSetupSecret) return;
+  navigator.clipboard.writeText(currentSetupSecret).then(() => {
+    showToast("Chave 2FA copiada para a área de transferência!");
+  }).catch(() => {
+    showToast("Chave 2FA selecionada.");
+  });
+}
+
+async function confirm2FASetup() {
+  const pinInput = document.querySelector("#twofa-setup-pin");
+  const errorDiv = document.querySelector("#twofa-setup-error");
+  if (!pinInput || !errorDiv || !window.TOTP) return;
+
+  const pin = pinInput.value.trim();
+  if (pin.length !== 6) {
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Por favor, digite o código de 6 dígitos gerado no app.";
+    pinInput.focus();
+    return;
+  }
+
+  const isValid = await window.TOTP.verifyToken(currentSetupSecret, pin);
+  if (isValid) {
+    window.TOTP.enable2FA(currentSetupSecret);
+    close2FASetupModal();
+    updateSessionInfo();
+    showToast("✓ Verificação em 2 Etapas (2FA) configurada com sucesso!");
+    if (currentTab === "admin-all" || currentTab === "admin-users") {
+      switchDashboardTab(currentTab);
+    }
+  } else {
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Código de 6 dígitos inválido ou expirado. Verifique o relógio do seu celular e tente novamente.";
+    pinInput.select();
+  }
+}
+
+function open2FAChallengeModal() {
+  const modal = document.querySelector("#modal-2fa-challenge");
+  const pinInput = document.querySelector("#twofa-challenge-pin");
+  const errorDiv = document.querySelector("#twofa-challenge-error");
+
+  if (pinInput) pinInput.value = "";
+  if (errorDiv) {
+    errorDiv.style.display = "none";
+    errorDiv.innerText = "";
+  }
+
+  if (modal) modal.style.display = "flex";
+
+  setTimeout(() => {
+    if (pinInput) pinInput.focus();
+  }, 100);
+}
+
+function close2FAChallengeModal() {
+  const modal = document.querySelector("#modal-2fa-challenge");
+  if (modal) modal.style.display = "none";
+  switchDashboardTab("my-links");
+}
+
+async function verify2FAChallenge() {
+  const pinInput = document.querySelector("#twofa-challenge-pin");
+  const errorDiv = document.querySelector("#twofa-challenge-error");
+  if (!pinInput || !errorDiv || !window.TOTP) return;
+
+  const pin = pinInput.value.trim();
+  if (pin.length !== 6) {
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Por favor, digite o código de 6 dígitos gerado no aplicativo.";
+    pinInput.focus();
+    return;
+  }
+
+  const savedSecret = window.TOTP.getSavedSecret();
+  const isValid = await window.TOTP.verifyToken(savedSecret, pin);
+
+  if (isValid) {
+    window.TOTP.setSessionVerified(true);
+    const modal = document.querySelector("#modal-2fa-challenge");
+    if (modal) modal.style.display = "none";
+    showToast("✓ Identidade de administrador verificada com sucesso!");
+    switchDashboardTab(targetTabAfter2FA || "admin-all");
+  } else {
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Código de 6 dígitos incorreto. Verifique no Microsoft Authenticator e tente novamente.";
+    pinInput.select();
+  }
+}
+
+function open2FAManageModal() {
+  if (!window.TOTP) return;
+  const modal = document.querySelector("#modal-2fa-manage");
+  const secretSpan = document.querySelector("#twofa-manage-secret");
+
+  if (secretSpan) {
+    secretSpan.innerText = window.TOTP.getSavedSecret();
+  }
+
+  if (modal) modal.style.display = "flex";
+}
+
+function close2FAManageModal() {
+  const modal = document.querySelector("#modal-2fa-manage");
+  if (modal) modal.style.display = "none";
+}
+
+function copy2FAManageSecret() {
+  if (!window.TOTP) return;
+  const secret = window.TOTP.getSavedSecret();
+  if (!secret) return;
+  navigator.clipboard.writeText(secret).then(() => {
+    showToast("Chave secreta de backup copiada!");
+  });
+}
+
+function disableAdmin2FA() {
+  if (!window.TOTP) return;
+  if (confirm("Tem certeza que deseja desativar a verificação em duas etapas da sua conta de administrador?")) {
+    window.TOTP.disable2FA();
+    close2FAManageModal();
+    updateSessionInfo();
+    showToast("Verificação em 2 etapas desativada.");
+  }
+}
+
 window.loadDashboardData = loadDashboardData;
 window.initDashboard = initDashboard;
 window.deleteLink = deleteLink;
@@ -1148,3 +1355,16 @@ window.toggleSelectLink = toggleSelectLink;
 window.toggleSelectAllLinks = toggleSelectAllLinks;
 window.deselectAllLinks = deselectAllLinks;
 window.deleteSelectedBatchLinks = deleteSelectedBatchLinks;
+window.handle2FABadgeClick = handle2FABadgeClick;
+window.open2FASetupModal = open2FASetupModal;
+window.close2FASetupModal = close2FASetupModal;
+window.copy2FASecret = copy2FASecret;
+window.confirm2FASetup = confirm2FASetup;
+window.open2FAChallengeModal = open2FAChallengeModal;
+window.close2FAChallengeModal = close2FAChallengeModal;
+window.verify2FAChallenge = verify2FAChallenge;
+window.open2FAManageModal = open2FAManageModal;
+window.close2FAManageModal = close2FAManageModal;
+window.copy2FAManageSecret = copy2FAManageSecret;
+window.disableAdmin2FA = disableAdmin2FA;
+
