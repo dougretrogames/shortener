@@ -4,8 +4,16 @@
  */
 
 const SUPABASE_CONFIG = {
-  url: "https://nmqzjcriwggemfawpjqc.supabase.co",
-  key: "sb_publishable_d8Ex_hrPcVGw61BhTuhoJQ_DAcG1s2W",
+  get url() {
+    return (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL) 
+      ? window.APP_CONFIG.SUPABASE_URL 
+      : "https://nmqzjcriwggemfawpjqc.supabase.co";
+  },
+  get key() {
+    return (window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY) 
+      ? window.APP_CONFIG.SUPABASE_ANON_KEY 
+      : "sb_publishable_d8Ex_hrPcVGw61BhTuhoJQ_DAcG1s2W";
+  },
   table: "short_links"
 };
 
@@ -13,9 +21,10 @@ const supabaseDb = {
   config: SUPABASE_CONFIG,
 
   getHeaders() {
+    const key = SUPABASE_CONFIG.key;
     return {
-      "apikey": SUPABASE_CONFIG.key,
-      "Authorization": `Bearer ${SUPABASE_CONFIG.key}`,
+      "apikey": key,
+      "Authorization": `Bearer ${key}`,
       "Content-Type": "application/json"
     };
   },
@@ -246,8 +255,9 @@ const supabaseDb = {
           return encType === cleanProvider || (cleanProvider === "github" && (!enc.author_type || encType === "github"));
         }
         
-        // Suporte legado
-        if (cleanUser === "dougretrogames" && (!encUser || encUser === "dougretrogames")) return true;
+        // Suporte legado para o dono da aplicação
+        const adminUser = typeof getAppAdminUsername === "function" ? getAppAdminUsername() : "dougretrogames";
+        if (cleanUser === adminUser && (!encUser || encUser === adminUser)) return true;
         return false;
       });
     } catch (e) {

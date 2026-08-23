@@ -17,12 +17,13 @@ window.allLinks = allLinks;
 window.filteredLinks = filteredLinks;
 window.selectedSlugs = selectedSlugs;
 
-// Verifica se o usuário conectado é o Administrador (@dougretrogames via GitHub)
+// Verifica se o usuário conectado é o Administrador da plataforma via GitHub
 function isAdminUser(user) {
   if (!user) return false;
   const username = String(user.username || user.name || "").toLowerCase().replace(/^@/, '');
   const provider = String(user.provider || "").toLowerCase();
-  return provider === "github" && username === "dougretrogames";
+  const targetAdmin = typeof getAppAdminUsername === "function" ? getAppAdminUsername() : "dougretrogames";
+  return provider === "github" && username === targetAdmin;
 }
 
 function initDashboard() {
@@ -1186,7 +1187,8 @@ function open2FASetupModal() {
   if (!window.TOTP) return;
 
   const user = window.authManager ? window.authManager.getUser() : null;
-  const username = user ? (user.username || user.name || "dougretrogames") : "dougretrogames";
+  const defaultAdmin = typeof getAppAdminUsername === "function" ? getAppAdminUsername() : "dougretrogames";
+  const username = user ? (user.username || user.name || defaultAdmin) : defaultAdmin;
 
   currentSetupSecret = window.TOTP.getSavedSecret() || window.TOTP.generateSecret(32);
   const otpAuthUrl = window.TOTP.getOtpAuthUrl(currentSetupSecret, username);

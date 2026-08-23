@@ -161,18 +161,29 @@ Para permitir que os usuários façam login com a conta Google:
 
 ---
 
-### Passo 6: Conectar o Código ao seu Supabase
+### Passo 6: Configurar o Arquivo `config.js` (Administrador e Banco)
 1. No Supabase, vá em **Project Settings** > **API**.
 2. Copie a **Project URL** (`https://xxxxxxxx.supabase.co`) e a chave **Project API Keys (anon public)**.
-3. Abra o arquivo [`supabase-db.js`](supabase-db.js) no seu projeto e atualize as constantes:
+3. Abra o arquivo central [`config.js`](config.js) no seu projeto e configure:
 
 ```javascript
-// Substitua pelas credenciais do seu projeto Supabase:
-const SUPABASE_URL = "https://SEU_PROJETO.supabase.co";
-const SUPABASE_ANON_KEY = "SUA_CHAVE_ANONIMA_PUBLICA_AQUI";
+const APP_CONFIG = {
+  // 1. Defina o seu username do GitHub que será o Administrador Geral da plataforma:
+  ADMIN_GITHUB_USERNAME: "seu-usuario-github",
+
+  // 2. Detecção automática do dono pelo GitHub Pages (*.github.io):
+  AUTO_DETECT_GITHUB_OWNER: true,
+
+  // 3. Suas credenciais do projeto Supabase:
+  SUPABASE_URL: "https://SEU_PROJETO.supabase.co",
+  SUPABASE_ANON_KEY: "SUA_CHAVE_ANONIMA_PUBLICA_AQUI"
+};
 ```
 
-Pronto! Seu projeto agora está totalmente conectado e funcional com autenticação via Google, GitHub e banco de dados na nuvem.
+> [!TIP]
+> Com a detecção automática ativada (`AUTO_DETECT_GITHUB_OWNER: true`), ao publicar em `https://seu-usuario.github.io/shortener/`, o sistema reconhece automaticamente a sua conta GitHub como administradora exclusiva, impedindo que clones ou forks acessem dados de outros donos!
+
+Pronto! Seu projeto agora está totalmente conectado, protegido e funcional com autenticação via Google, GitHub e banco de dados isolado na nuvem.
 
 ---
 
