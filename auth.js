@@ -14,7 +14,16 @@ class AuthManager {
   loadUser() {
     try {
       const data = localStorage.getItem(AUTH_USER_KEY);
-      return data ? JSON.parse(data) : null;
+      if (!data) return null;
+      const parsed = JSON.parse(data);
+      if (parsed) {
+        // Auto-correção para contas do Google salvas anteriormente
+        if (parsed.email && (parsed.email.endsWith('@gmail.com') || parsed.email.includes('google')) || (parsed.avatar && parsed.avatar.includes('googleusercontent'))) {
+          parsed.provider = "google";
+          parsed.providerName = "Google";
+        }
+      }
+      return parsed;
     } catch (e) {
       console.error("Erro ao carregar usuário do LocalStorage:", e);
       return null;
@@ -381,7 +390,22 @@ async function applyUserSession(data, accessToken, refreshToken) {
   const identities = data.identities || [];
   const identity = identities[0] || {};
   const idData = identity.identity_data || {};
-  const provider = data.app_metadata?.provider || identity.provider || meta.provider || (data.email && data.email.includes("@github") ? "github" : "google");
+
+  let provider = data.app_metadata?.provider || identity.provider || meta.provider;
+  if (!provider) {
+    if (data.email && (data.email.endsWith("@gmail.com") || data.email.includes("google"))) {
+      provider = "google";
+    } else if (meta.picture && meta.picture.includes("googleusercontent")) {
+      provider = "google";
+    } else if (meta.avatar_url && meta.avatar_url.includes("githubusercontent")) {
+      provider = "github";
+    } else if (data.email && data.email.includes("@github")) {
+      provider = "github";
+    } else {
+      provider = "google";
+    }
+  }
+  provider = String(provider).toLowerCase();
 
   const rawUsername = meta.user_name || meta.preferred_username || idData.user_name || idData.login || (data.email ? data.email.split('@')[0] : "usuario");
   const cleanUsername = String(rawUsername).toLowerCase().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 39);

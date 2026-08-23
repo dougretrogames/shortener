@@ -222,14 +222,14 @@ const supabaseDb = {
     // Injeta os dados definitivos da conta criadora dentro de encrypted_data (JSONB)
     if (typeof encryptedData === "object" && encryptedData !== null) {
       encryptedData.author_type = authorType || "visitante";
-      encryptedData.author_username = (authorUsername || (authorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
+      encryptedData.author_username = (authorUsername || (authorType === "google" ? "google" : authorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
       encryptedData.author_id = authorId || ("user_" + Math.random().toString(36).substring(2));
-      encryptedData.author_name = authorName || (authorType === "github" ? "GitHub" : "Visitante");
+      encryptedData.author_name = authorName || (authorType === "google" ? "Google" : authorType === "github" ? "GitHub" : "Visitante");
       if (authorAvatar) encryptedData.author_avatar = authorAvatar;
     }
 
     const finalAuthorType = authorType || "visitante";
-    const finalAuthorName = authorName || (finalAuthorType === "github" ? (authorUsername ? `@${authorUsername}` : "GitHub") : "Visitante");
+    const finalAuthorName = authorName || (finalAuthorType === "google" ? (authorName || "Google") : finalAuthorType === "github" ? (authorUsername ? `@${authorUsername}` : "GitHub") : "Visitante");
 
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
@@ -272,10 +272,11 @@ const supabaseDb = {
         ? linkRecord.encrypted_data
         : {};
 
-      enc.author_type = authorType || "github";
-      enc.author_username = (authorUsername || "github").toLowerCase().replace(/^@/, '');
-      enc.author_id = authorId || `github_${enc.author_username}`;
-      enc.author_name = authorName || `@${enc.author_username}`;
+      const finalType = authorType || "google";
+      enc.author_type = finalType;
+      enc.author_username = (authorUsername || finalType).toLowerCase().replace(/^@/, '');
+      enc.author_id = authorId || `${finalType}_${enc.author_username}`;
+      enc.author_name = authorName || (finalType === "google" ? "Google" : `@${enc.author_username}`);
       if (authorAvatar) enc.author_avatar = authorAvatar;
 
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
