@@ -1295,9 +1295,18 @@ function copy2FASecret() {
 async function confirm2FASetup() {
   const pinInput = document.querySelector("#twofa-setup-pin");
   const errorDiv = document.querySelector("#twofa-setup-error");
-  if (!pinInput || !errorDiv || !window.TOTP) return;
+  const confirmBtn = document.querySelector("#btn-confirm-2fa-setup");
+  const confirmBtnText = document.querySelector("#btn-confirm-2fa-text");
 
-  const pin = pinInput.value.trim();
+  if (!pinInput || !errorDiv) return;
+  if (!window.TOTP) {
+    alert("Módulo 2FA não carregado. Recarregue a página e tente novamente.");
+    return;
+  }
+
+  const rawVal = pinInput.value || "";
+  const pin = String(rawVal).replace(/\D/g, '').trim();
+
   if (pin.length !== 6) {
     errorDiv.style.display = "block";
     errorDiv.innerText = "Por favor, digite o código de 6 dígitos gerado no app.";
@@ -1305,19 +1314,41 @@ async function confirm2FASetup() {
     return;
   }
 
-  const isValid = await window.TOTP.verifyToken(currentSetupSecret, pin);
-  if (isValid) {
-    window.TOTP.enable2FA(currentSetupSecret);
-    close2FASetupModal();
-    updateSessionInfo();
-    showToast("✓ Verificação em 2 Etapas (2FA) configurada com sucesso!");
-    if (currentTab === "admin-all" || currentTab === "admin-users") {
-      switchDashboardTab(currentTab);
-    }
-  } else {
+  const secretToVerify = currentSetupSecret 
+    || window.TOTP.getSavedSecret() 
+    || document.querySelector("#twofa-setup-secret")?.innerText?.trim();
+
+  if (!secretToVerify) {
     errorDiv.style.display = "block";
-    errorDiv.innerText = "Código de 6 dígitos inválido ou expirado. Verifique o relógio do seu celular e tente novamente.";
-    pinInput.select();
+    errorDiv.innerText = "Chave secreta não encontrada. Feche e abra o modal novamente.";
+    return;
+  }
+
+  if (confirmBtn) confirmBtn.disabled = true;
+  if (confirmBtnText) confirmBtnText.innerText = "Verificando...";
+
+  try {
+    const isValid = await window.TOTP.verifyToken(secretToVerify, pin);
+    if (isValid) {
+      window.TOTP.enable2FA(secretToVerify);
+      close2FASetupModal();
+      updateSessionInfo();
+      showToast("✓ Verificação em 2 Etapas (2FA) configurada com sucesso!");
+      if (currentTab === "admin-all" || currentTab === "admin-users") {
+        switchDashboardTab(currentTab);
+      }
+    } else {
+      errorDiv.style.display = "block";
+      errorDiv.innerText = "Código de 6 dígitos inválido ou expirado. Verifique o relógio do seu celular e tente novamente.";
+      pinInput.select();
+    }
+  } catch (e) {
+    console.error("Erro na verificação 2FA:", e);
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Erro ao validar código. Tente novamente.";
+  } finally {
+    if (confirmBtn) confirmBtn.disabled = false;
+    if (confirmBtnText) confirmBtnText.innerText = "Confirmar e Ativar";
   }
 }
 
@@ -1352,9 +1383,18 @@ function close2FAChallengeModal() {
 async function verify2FAChallenge() {
   const pinInput = document.querySelector("#twofa-challenge-pin");
   const errorDiv = document.querySelector("#twofa-challenge-error");
-  if (!pinInput || !errorDiv || !window.TOTP) return;
+  const verifyBtn = document.querySelector("#btn-verify-2fa-challenge");
+  const verifyBtnText = document.querySelector("#btn-verify-2fa-text");
 
-  const pin = pinInput.value.trim();
+  if (!pinInput || !errorDiv) return;
+  if (!window.TOTP) {
+    alert("Módulo 2FA não carregado. Recarregue a página.");
+    return;
+  }
+
+  const rawVal = pinInput.value || "";
+  const pin = String(rawVal).replace(/\D/g, '').trim();
+
   if (pin.length !== 6) {
     errorDiv.style.display = "block";
     errorDiv.innerText = "Por favor, digite o código de 6 dígitos gerado no aplicativo.";
@@ -1363,18 +1403,35 @@ async function verify2FAChallenge() {
   }
 
   const savedSecret = window.TOTP.getSavedSecret();
-  const isValid = await window.TOTP.verifyToken(savedSecret, pin);
-
-  if (isValid) {
-    window.TOTP.setSessionVerified(true);
-    const modal = document.querySelector("#modal-2fa-challenge");
-    if (modal) modal.style.display = "none";
-    showToast("✓ Identidade de administrador verificada com sucesso!");
-    switchDashboardTab(targetTabAfter2FA || "admin-all");
-  } else {
+  if (!savedSecret) {
     errorDiv.style.display = "block";
-    errorDiv.innerText = "Código de 6 dígitos incorreto. Verifique no Microsoft Authenticator e tente novamente.";
-    pinInput.select();
+    errorDiv.innerText = "Nenhuma chave 2FA salva encontrada nesta conta.";
+    return;
+  }
+
+  if (verifyBtn) verifyBtn.disabled = true;
+  if (verifyBtnText) verifyBtnText.innerText = "Verificando...";
+
+  try {
+    const isValid = await window.TOTP.verifyToken(savedSecret, pin);
+    if (isValid) {
+      window.TOTP.setSessionVerified(true);
+      const modal = document.querySelector("#modal-2fa-challenge");
+      if (modal) modal.style.display = "none";
+      showToast("✓ Identidade de administrador verificada com sucesso!");
+      switchDashboardTab(targetTabAfter2FA || "admin-all");
+    } else {
+      errorDiv.style.display = "block";
+      errorDiv.innerText = "Código de 6 dígitos incorreto. Verifique no Microsoft Authenticator e tente novamente.";
+      pinInput.select();
+    }
+  } catch (e) {
+    console.error("Erro no desafio 2FA:", e);
+    errorDiv.style.display = "block";
+    errorDiv.innerText = "Erro ao validar desafio 2FA. Tente novamente.";
+  } finally {
+    if (verifyBtn) verifyBtn.disabled = false;
+    if (verifyBtnText) verifyBtnText.innerText = "Desbloquear Painel";
   }
 }
 
