@@ -112,6 +112,11 @@ async function loadDashboardData() {
     window.allLinks = allLinks;
     renderStats();
     filterLinks();
+
+    // Sincroniza em segundo plano a coluna author_id caso algum link antigo esteja sem ela
+    if (window.supabaseDb && typeof window.supabaseDb.syncUserLinksAuthorId === "function" && user) {
+      window.supabaseDb.syncUserLinksAuthorId(user).catch(() => {});
+    }
   } catch (e) {
     console.error("[Supabase] Erro ao carregar dados exclusivos do banco:", e);
     allLinks = [];

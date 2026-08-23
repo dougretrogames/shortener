@@ -272,6 +272,7 @@ const supabaseDb = {
 
     const finalAuthorType = authorType || "visitante";
     const finalAuthorName = authorName || (finalAuthorType === "google" ? (authorName || "Google") : finalAuthorType === "github" ? (authorUsername ? `@${authorUsername}` : "GitHub") : "Visitante");
+    const finalAuthorId = authorId || (encryptedData ? encryptedData.author_id : null);
 
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
@@ -282,7 +283,8 @@ const supabaseDb = {
         clicks: 0,
         created_at: new Date().toISOString(),
         author_type: finalAuthorType,
-        author_name: finalAuthorName
+        author_name: finalAuthorName,
+        author_id: finalAuthorId
       };
 
       const res = await fetch(endpoint, {
@@ -332,7 +334,8 @@ const supabaseDb = {
         body: JSON.stringify({
           encrypted_data: enc,
           author_type: enc.author_type,
-          author_name: enc.author_name
+          author_name: enc.author_name,
+          author_id: enc.author_id
         })
       });
 
@@ -340,6 +343,38 @@ const supabaseDb = {
     } catch (e) {
       console.error(`[Supabase] Erro ao atualizar autor do slug /${cleanSlug}:`, e);
       return false;
+    }
+  },
+
+  // Sincroniza e preenche automaticamente a coluna author_id em links existentes que ainda estejam vazios
+  async syncUserLinksAuthorId(user) {
+    if (!user || !user.username) return;
+    const cleanUser = String(user.username).toLowerCase().replace(/^@/, '');
+    const provider = user.provider || "github";
+    const authorId = user.id || `${provider}_${cleanUser}`;
+    const authorName = user.name || (user.username ? `@${user.username}` : (provider === "google" ? "Google" : "GitHub"));
+    const authorAvatar = user.avatar || "";
+
+    try {
+      const userLinks = await this.getUserLinks(user);
+      if (!Array.isArray(userLinks) || userLinks.length === 0) return;
+
+      for (const link of userLinks) {
+        const enc = (link.encrypted_data && typeof link.encrypted_data === "object") ? link.encrypted_data : {};
+        const isAuthorIdMissing = !link.author_id || !enc.author_id;
+
+        if (isAuthorIdMissing) {
+          await this.updateLinkAuthor(link.slug, {
+            authorType: link.author_type || enc.author_type || provider,
+            authorUsername: enc.author_username || cleanUser,
+            authorId: authorId,
+            authorName: link.author_name || enc.author_name || authorName,
+            authorAvatar: authorAvatar
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("[Supabase] Sincronização automática de author_id:", e);
     }
   },
 

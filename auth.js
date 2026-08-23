@@ -207,6 +207,11 @@ async function migrateVisitorLinksToAccount(userData) {
       }
     }
 
+    // Sincroniza a coluna author_id em links do usuário que ainda não a possuam
+    if (window.supabaseDb && typeof window.supabaseDb.syncUserLinksAuthorId === "function") {
+      await window.supabaseDb.syncUserLinksAuthorId(userData);
+    }
+
     // Após garantir a atualização/migração no Supabase, limpa COMPLETAMENTE o cache local
     localStorage.removeItem("linklock_saved_custom_links");
     localStorage.removeItem("linklock_history");
