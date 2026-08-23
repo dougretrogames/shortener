@@ -656,6 +656,18 @@ body {
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
+.provider-badge.github {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.provider-badge.google {
+  background: rgba(66, 133, 244, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(66, 133, 244, 0.35);
+}
+
 /* Formulários & Campos de Entrada */
 .form-group, .labeled-input {
   margin-bottom: 1.15rem;
@@ -1563,7 +1575,7 @@ footer a:hover {
   justify-content: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.8rem 1.25rem;
+  padding: 0.85rem 1.25rem;
   border-radius: var(--radius-md);
   font-size: 0.95rem;
   font-weight: 600;
@@ -1571,32 +1583,40 @@ footer a:hover {
   cursor: pointer;
   transition: all var(--transition-fast);
   border: 1px solid var(--border-color);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  min-height: 46px;
+  min-height: 48px;
 }
 
 .btn-social:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-social:active {
   transform: translateY(0);
 }
 
+.btn-google {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #e5e7eb !important;
+}
+
 .btn-google:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: #4285F4;
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15) !important;
+}
+
+.btn-github {
+  background: #181c24 !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
 }
 
 .btn-github:hover {
-  background: #24292e;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.btn-microsoft:hover {
-  background: rgba(0, 164, 239, 0.1);
-  border-color: #00A4EF;
+  background: #24292e !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* ==========================================================================
