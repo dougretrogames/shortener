@@ -486,6 +486,31 @@ const supabaseDb = {
     }
   },
 
+  // Exclui múltiplos links em lote no Supabase
+  async deleteLinksBatch(slugs) {
+    if (!Array.isArray(slugs) || slugs.length === 0) return false;
+    const cleanSlugs = slugs.map(s => String(s).trim().toLowerCase().replace(/^[/#]+/, '')).filter(Boolean);
+    if (cleanSlugs.length === 0) return false;
+
+    try {
+      // Usa o operador in do PostgREST para exclusão em lote
+      const inList = cleanSlugs.map(s => `"${encodeURIComponent(s)}"`).join(',');
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=in.(${inList})`;
+      const res = await fetch(endpoint, {
+        method: "DELETE",
+        headers: {
+          ...this.getHeaders(),
+          "Prefer": "return=minimal"
+        }
+      });
+
+      return res.ok || res.status === 204 || res.status === 200;
+    } catch (e) {
+      console.error("[Supabase] Falha ao excluir links em lote:", e);
+      return false;
+    }
+  },
+
   // Incrementa contador de cliques no Supabase em tempo real
   async incrementClicks(slug) {
     if (!slug) return 0;

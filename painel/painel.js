@@ -1,12 +1,29 @@
 /**
- * Shortener - Lógica do Painel de Controle (painel.js)
- * Gerenciamento de links, métricas de cliques, edição e exportação de dados
+ * Shortener - Lógica do Painel de Controle e Administração (painel.js)
+ * Gerenciamento de links, métricas, edição, exclusão em lote e visão de usuários
  */
 
+let myLinks = [];
+let allSystemLinks = [];
 let allLinks = [];
 let filteredLinks = [];
+let uniqueUsersList = [];
+let currentTab = "my-links"; // "my-links" | "admin-all" | "admin-users"
+let selectedSlugs = new Set();
+
+window.myLinks = myLinks;
+window.allSystemLinks = allSystemLinks;
 window.allLinks = allLinks;
 window.filteredLinks = filteredLinks;
+window.selectedSlugs = selectedSlugs;
+
+// Verifica se o usuário conectado é o Administrador (@dougretrogames via GitHub)
+function isAdminUser(user) {
+  if (!user) return false;
+  const username = String(user.username || user.name || "").toLowerCase().replace(/^@/, '');
+  const provider = String(user.provider || "").toLowerCase();
+  return provider === "github" && username === "dougretrogames";
+}
 
 function initDashboard() {
   const isAuth = window.authManager && window.authManager.isAuthenticated();
@@ -22,6 +39,27 @@ function initDashboard() {
   if (restrictedCard) restrictedCard.style.display = "none";
   if (dashboardContent) dashboardContent.style.display = "block";
 
+  const user = window.authManager.getUser();
+  const isAdmin = isAdminUser(user);
+
+  // Exibe abas de administrador e filtros avançados exclusivamente para @dougretrogames
+  const adminTabs = document.querySelector("#admin-tabs-container");
+  const userFilter = document.querySelector("#filter-user-select");
+  const providerFilter = document.querySelector("#filter-provider-select");
+  const thCheckbox = document.querySelector("#th-checkbox");
+
+  if (isAdmin) {
+    if (adminTabs) adminTabs.style.display = "flex";
+    if (userFilter) userFilter.style.display = "inline-block";
+    if (providerFilter) providerFilter.style.display = "inline-block";
+    if (thCheckbox) thCheckbox.style.display = "table-cell";
+  } else {
+    if (adminTabs) adminTabs.style.display = "none";
+    if (userFilter) userFilter.style.display = "none";
+    if (providerFilter) providerFilter.style.display = "none";
+    if (thCheckbox) thCheckbox.style.display = "none";
+  }
+
   updateSessionInfo();
   loadDashboardData();
 }
@@ -31,16 +69,70 @@ function updateSessionInfo() {
   const sessionBadge = document.querySelector("#session-badge");
   const dashboardTitle = document.querySelector("#dashboard-title");
   const dashboardSubtitle = document.querySelector("#dashboard-subtitle");
+  const isAdmin = isAdminUser(user);
 
   if (user) {
     if (sessionBadge) {
-      sessionBadge.className = `badge provider-badge ${user.provider || 'github'}`;
-      sessionBadge.innerText = `Conectado via ${user.providerName || 'GitHub'} (@${user.username || user.name})`;
+      if (isAdmin) {
+        sessionBadge.className = "badge badge-admin";
+        sessionBadge.innerHTML = `👑 Administrador Geral (@${user.username})`;
+      } else {
+        sessionBadge.className = `badge provider-badge ${user.provider || 'github'}`;
+        sessionBadge.innerText = `Conectado via ${user.providerName || 'GitHub'} (@${user.username || user.name})`;
+      }
     }
     const nameDisplay = user.name && user.name !== user.username ? `${user.name} (@${user.username})` : `@${user.username || user.name}`;
-    if (dashboardTitle) dashboardTitle.innerText = `Olá, ${nameDisplay}!`;
-    if (dashboardSubtitle) dashboardSubtitle.innerText = `Exibindo os links vinculados exclusivamente à sua conta @${user.username || user.name} e sincronizados na nuvem.`;
+    if (dashboardTitle) {
+      dashboardTitle.innerText = isAdmin ? `Painel do Administrador` : `Olá, ${nameDisplay}!`;
+    }
+    if (dashboardSubtitle) {
+      dashboardSubtitle.innerText = isAdmin
+        ? `Gerenciamento central de todos os links, usuários e estatísticas da plataforma.`
+        : `Exibindo os links vinculados exclusivamente à sua conta @${user.username || user.name} e sincronizados na nuvem.`;
+    }
   }
+}
+
+// Mapeador auxiliar de registros do Supabase
+function mapRemoteRecord(remote, user) {
+  const baseUrl = new URL('../', window.location.href).href;
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+  const enc = (remote.encrypted_data && typeof remote.encrypted_data === "object") ? remote.encrypted_data : {};
+  const remoteClicks = Number(remote.clicks) || 0;
+  const outputUrl = `${cleanBaseUrl}${encodeURIComponent(remote.slug)}`;
+  
+  const encType = enc.author_type || remote.author_type;
+  const authorType = (encType === "google" || encType === "github" || encType === "visitante") 
+    ? encType 
+    : "visitante";
+  
+  let authorUsername = (enc.author_username || remote.author_username || "").toLowerCase().replace(/^@/, '');
+  if (!authorUsername && authorType !== "visitante") {
+    authorUsername = authorType;
+  }
+  
+  let authorName = enc.author_name || remote.author_name || (authorUsername ? `@${authorUsername}` : "Visitante");
+  if (authorUsername && !authorName.startsWith("@")) {
+    authorName = `@${authorUsername}`;
+  }
+
+  const isPasswordProtected = !!(enc.e && enc.s && enc.i);
+
+  return {
+    slug: remote.slug,
+    outputUrl: outputUrl,
+    shortUrl: outputUrl,
+    autonomousUrl: `${cleanBaseUrl}#/${encodeURIComponent(remote.slug)}`,
+    targetUrl: enc.t || enc.u || `Link Protegido (/${remote.slug})`,
+    hint: remote.hint || enc.h || "",
+    encryptedData: enc,
+    clicks: remoteClicks,
+    authorType: authorType,
+    authorUsername: authorUsername,
+    authorName: authorName,
+    isPasswordProtected: isPasswordProtected,
+    createdAt: remote.created_at || new Date().toISOString()
+  };
 }
 
 async function loadDashboardData() {
@@ -48,19 +140,22 @@ async function loadDashboardData() {
   const userIdentifier = user ? (user.username || user.name || user.id) : null;
   const tbody = document.querySelector("#dashboard-tbody");
   const noLinksMsg = document.querySelector("#no-links-msg");
+  const isAdmin = isAdminUser(user);
 
   if (!window.supabaseDb || !userIdentifier) {
+    myLinks = [];
+    allSystemLinks = [];
     allLinks = [];
     renderStats();
     filterLinks();
     return;
   }
 
-  // Exibe estado de carregamento inicial enquanto consulta o banco de dados
+  // Estado de carregamento
   if (tbody && allLinks.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+        <td colspan="${isAdmin ? '8' : '7'}" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
           <div style="display: inline-block; width: 26px; height: 26px; border: 2px solid rgba(56, 189, 248, 0.2); border-top-color: var(--accent-primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 0.65rem;"></div>
           <p style="font-size: 0.88rem; margin: 0; color: var(--text-secondary);">Consultando dados do banco de dados na nuvem...</p>
         </td>
@@ -70,66 +165,168 @@ async function loadDashboardData() {
   }
 
   try {
-    // Carrega dados EXCLUSIVAMENTE do banco de dados Supabase para a conta conectada
-    const remoteList = await window.supabaseDb.getUserLinks(user || userIdentifier);
-
-    if (Array.isArray(remoteList)) {
-      const baseUrl = new URL('../', window.location.href).href;
-      const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-      
-      allLinks = remoteList.map(remote => {
-        const enc = (remote.encrypted_data && typeof remote.encrypted_data === "object") ? remote.encrypted_data : {};
-        const remoteClicks = Number(remote.clicks) || 0;
-        const outputUrl = `${cleanBaseUrl}${encodeURIComponent(remote.slug)}`;
-        
-        // Identifica o criador vinculado à conta no banco (Google, GitHub ou Visitante)
-        const encType = enc.author_type || remote.author_type;
-        const authorType = (encType === "google" || encType === "github") 
-          ? encType 
-          : (user && user.provider ? user.provider : (encType ? encType : "visitante"));
-        let authorUsername = enc.author_username || remote.author_username || (user ? user.username : "");
-        let authorName = enc.author_name || remote.author_name || (user && user.name ? user.name : (authorUsername ? `@${authorUsername}` : (authorType === "google" ? "Google" : authorType === "github" ? "GitHub" : "Visitante")));
-
-        return {
-          slug: remote.slug,
-          outputUrl: outputUrl,
-          shortUrl: outputUrl,
-          autonomousUrl: `${cleanBaseUrl}#/${encodeURIComponent(remote.slug)}`,
-          targetUrl: enc.t || enc.u || `Link Protegido (/${remote.slug})`,
-          hint: remote.hint || enc.h || "",
-          encryptedData: enc,
-          clicks: remoteClicks, // 100% exclusivo do banco de dados
-          authorType: authorType,
-          authorUsername: authorUsername,
-          authorName: authorName,
-          createdAt: remote.created_at || new Date().toISOString()
-        };
-      });
+    // 1. Carrega os links do próprio usuário logado
+    const personalRemote = await window.supabaseDb.getUserLinks(user || userIdentifier);
+    if (Array.isArray(personalRemote)) {
+      myLinks = personalRemote.map(r => mapRemoteRecord(r, user));
     } else {
-      allLinks = [];
+      myLinks = [];
     }
 
-    window.allLinks = allLinks;
-    renderStats();
-    filterLinks();
+    // 2. Se for o administrador @dougretrogames, carrega TODOS os links do banco
+    if (isAdmin) {
+      const allRemote = await window.supabaseDb.getAllLinks();
+      if (Array.isArray(allRemote)) {
+        allSystemLinks = allRemote.map(r => mapRemoteRecord(r, user));
+      } else {
+        allSystemLinks = [];
+      }
 
-    // Sincroniza em segundo plano a coluna author_id caso algum link antigo esteja sem ela
+      // Agrupa usuários únicos
+      buildUniqueUsersList();
+      populateUserFilterDropdown();
+    } else {
+      allSystemLinks = [...myLinks];
+    }
+
+    // Atualiza contadores das abas
+    const myCountEl = document.querySelector("#tab-my-links-count");
+    const allCountEl = document.querySelector("#tab-admin-all-count");
+    const usersCountEl = document.querySelector("#tab-admin-users-count");
+
+    if (myCountEl) myCountEl.innerText = myLinks.length;
+    if (allCountEl) allCountEl.innerText = allSystemLinks.length;
+    if (usersCountEl) usersCountEl.innerText = uniqueUsersList.length;
+
+    // Define os links atuais da aba selecionada
+    if (currentTab === "my-links") {
+      allLinks = myLinks;
+    } else if (currentTab === "admin-all") {
+      allLinks = allSystemLinks;
+    } else {
+      allLinks = allSystemLinks;
+    }
+
+    window.myLinks = myLinks;
+    window.allSystemLinks = allSystemLinks;
+    window.allLinks = allLinks;
+
+    renderStats();
+    if (currentTab === "admin-users") {
+      renderUsersGrid();
+    } else {
+      filterLinks();
+    }
+
+    // Sincronização em segundo plano de author_id caso necessário
     if (window.supabaseDb && typeof window.supabaseDb.syncUserLinksAuthorId === "function" && user) {
       window.supabaseDb.syncUserLinksAuthorId(user).catch(() => {});
     }
   } catch (e) {
-    console.error("[Supabase] Erro ao carregar dados exclusivos do banco:", e);
+    console.error("[Supabase] Erro ao carregar dados do banco:", e);
+    myLinks = [];
+    allSystemLinks = [];
     allLinks = [];
-    window.allLinks = allLinks;
     renderStats();
     filterLinks();
   }
 }
 
-window.loadDashboardData = loadDashboardData;
-window.initDashboard = initDashboard;
-window.deleteLink = deleteLink;
-window.saveEditedLink = saveEditedLink;
+// Constrói a lista analítica de usuários
+function buildUniqueUsersList() {
+  const usersMap = new Map();
+
+  allSystemLinks.forEach(link => {
+    const rawUser = link.authorUsername || "visitante";
+    const cleanUser = rawUser.toLowerCase().replace(/^@/, '');
+    const provider = link.authorType || "visitante";
+    const key = `${provider}_${cleanUser}`;
+
+    if (!usersMap.has(key)) {
+      usersMap.set(key, {
+        key: key,
+        username: cleanUser,
+        authorName: link.authorName || (cleanUser ? `@${cleanUser}` : "Visitante"),
+        provider: provider,
+        linkCount: 0,
+        clickCount: 0,
+        latestCreatedAt: link.createdAt
+      });
+    }
+
+    const userData = usersMap.get(key);
+    userData.linkCount += 1;
+    userData.clickCount += (Number(link.clicks) || 0);
+    if (new Date(link.createdAt) > new Date(userData.latestCreatedAt)) {
+      userData.latestCreatedAt = link.createdAt;
+    }
+  });
+
+  uniqueUsersList = Array.from(usersMap.values()).sort((a, b) => b.linkCount - a.linkCount);
+}
+
+// Popula o select de filtro por usuário
+function populateUserFilterDropdown() {
+  const select = document.querySelector("#filter-user-select");
+  if (!select) return;
+
+  const currentVal = select.value;
+  let html = `<option value="all">Todos os Usuários (${uniqueUsersList.length})</option>`;
+
+  uniqueUsersList.forEach(u => {
+    const iconLabel = u.provider === "google" ? "🔴 Google" : u.provider === "github" ? "🐙 GitHub" : "👤 Visitante";
+    const display = u.username ? `@${u.username}` : "Visitante";
+    html += `<option value="${escapeHtml(u.username)}">${iconLabel} ${escapeHtml(display)} (${u.linkCount})</option>`;
+  });
+
+  select.innerHTML = html;
+  if (currentVal && Array.from(select.options).some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  }
+}
+
+// Alternador de Abas do Dashboard
+function switchDashboardTab(tab) {
+  currentTab = tab;
+  deselectAllLinks();
+
+  const tabMyLinks = document.querySelector("#tab-my-links");
+  const tabAdminAll = document.querySelector("#tab-admin-all");
+  const tabAdminUsers = document.querySelector("#tab-admin-users");
+
+  const tableViewSection = document.querySelector("#table-view-section");
+  const usersViewSection = document.querySelector("#users-view-section");
+  const thCheckbox = document.querySelector("#th-checkbox");
+  const statLabelLinks = document.querySelector("#stat-label-links");
+
+  if (tabMyLinks) tabMyLinks.className = tab === "my-links" ? "admin-tab-btn active" : "admin-tab-btn";
+  if (tabAdminAll) tabAdminAll.className = tab === "admin-all" ? "admin-tab-btn active" : "admin-tab-btn";
+  if (tabAdminUsers) tabAdminUsers.className = tab === "admin-users" ? "admin-tab-btn active" : "admin-tab-btn";
+
+  if (tab === "my-links") {
+    allLinks = myLinks;
+    if (statLabelLinks) statLabelLinks.innerText = "Meus Links";
+    if (tableViewSection) tableViewSection.style.display = "block";
+    if (usersViewSection) usersViewSection.style.display = "none";
+    if (thCheckbox) thCheckbox.style.display = "table-cell";
+    renderStats();
+    filterLinks();
+  } else if (tab === "admin-all") {
+    allLinks = allSystemLinks;
+    if (statLabelLinks) statLabelLinks.innerText = "Links no Sistema";
+    if (tableViewSection) tableViewSection.style.display = "block";
+    if (usersViewSection) usersViewSection.style.display = "none";
+    if (thCheckbox) thCheckbox.style.display = "table-cell";
+    renderStats();
+    filterLinks();
+  } else if (tab === "admin-users") {
+    allLinks = allSystemLinks;
+    if (tableViewSection) tableViewSection.style.display = "none";
+    if (usersViewSection) usersViewSection.style.display = "block";
+    renderStats();
+    renderUsersGrid();
+  }
+}
 
 function renderStats() {
   const totalLinks = allLinks.length;
@@ -148,22 +345,46 @@ function renderStats() {
 
   const avgClicks = totalLinks > 0 ? (totalClicks / totalLinks).toFixed(1) : "0.0";
 
-  document.querySelector("#stat-total-links").innerText = totalLinks;
-  document.querySelector("#stat-total-clicks").innerText = totalClicks;
-  document.querySelector("#stat-top-slug").innerText = topLink ? (topLink.slug || "Sem apelido") : "-";
-  document.querySelector("#stat-avg-clicks").innerText = avgClicks;
+  const statLinksEl = document.querySelector("#stat-total-links");
+  const statClicksEl = document.querySelector("#stat-total-clicks");
+  const statTopSlugEl = document.querySelector("#stat-top-slug");
+  const statAvgClicksEl = document.querySelector("#stat-avg-clicks");
+
+  if (statLinksEl) statLinksEl.innerText = totalLinks;
+  if (statClicksEl) statClicksEl.innerText = totalClicks;
+  if (statTopSlugEl) statTopSlugEl.innerText = topLink ? (topLink.slug || "Sem apelido") : "-";
+  if (statAvgClicksEl) statAvgClicksEl.innerText = avgClicks;
 }
 
 function filterLinks() {
-  const query = (document.querySelector("#search-input").value || "").trim().toLowerCase();
-  const sortMode = document.querySelector("#sort-select").value;
+  const query = (document.querySelector("#search-input") ? document.querySelector("#search-input").value : "").trim().toLowerCase();
+  const userFilter = document.querySelector("#filter-user-select") ? document.querySelector("#filter-user-select").value : "all";
+  const providerFilter = document.querySelector("#filter-provider-select") ? document.querySelector("#filter-provider-select").value : "all";
+  const sortMode = document.querySelector("#sort-select") ? document.querySelector("#sort-select").value : "date-desc";
 
   filteredLinks = allLinks.filter(link => {
     const slug = (link.slug || "").toLowerCase();
     const target = (link.targetUrl || "").toLowerCase();
     const hint = (link.hint || "").toLowerCase();
-    const author = (link.authorName || "").toLowerCase();
-    return slug.includes(query) || target.includes(query) || hint.includes(query) || author.includes(query);
+    const authorUser = (link.authorUsername || "").toLowerCase();
+    const authorName = (link.authorName || "").toLowerCase();
+    const authorType = (link.authorType || "").toLowerCase();
+
+    // Filtro textual
+    const matchesQuery = !query || slug.includes(query) || target.includes(query) || hint.includes(query) || authorUser.includes(query) || authorName.includes(query);
+    if (!matchesQuery) return false;
+
+    // Filtro por usuário específico
+    if (userFilter !== "all" && authorUser !== userFilter.toLowerCase()) {
+      return false;
+    }
+
+    // Filtro por provedor
+    if (providerFilter !== "all" && authorType !== providerFilter.toLowerCase()) {
+      return false;
+    }
+
+    return true;
   });
 
   // Ordenação
@@ -178,6 +399,8 @@ function filterLinks() {
       return (a.clicks || 0) - (b.clicks || 0);
     } else if (sortMode === "name-asc") {
       return (a.slug || "").localeCompare(b.slug || "");
+    } else if (sortMode === "user-asc") {
+      return (a.authorUsername || "").localeCompare(b.authorUsername || "");
     }
     return 0;
   });
@@ -185,32 +408,59 @@ function filterLinks() {
   renderLinksTable();
 }
 
+function getGoogleIconSvg() {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align: -2px; margin-right: 4px; display: inline-block;">
+    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24Z"/>
+    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"/>
+    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"/>
+  </svg>`;
+}
+
+function getGithubIconSvg() {
+  return `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -2px; margin-right: 4px; display: inline-block;">
+    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+  </svg>`;
+}
+
 function renderLinksTable() {
   const tbody = document.querySelector("#dashboard-tbody");
   const noLinksMsg = document.querySelector("#no-links-msg");
+  const noLinksText = document.querySelector("#no-links-text");
+  const user = window.authManager ? window.authManager.getUser() : null;
+  const isAdmin = isAdminUser(user);
 
   if (!filteredLinks || filteredLinks.length === 0) {
     tbody.innerHTML = "";
-    noLinksMsg.style.display = "block";
+    if (noLinksMsg) noLinksMsg.style.display = "block";
+    if (noLinksText) {
+      noLinksText.innerText = currentTab === "admin-all" 
+        ? "Nenhum link encontrado com os filtros selecionados."
+        : "Nenhum link encontrado no seu painel.";
+    }
     return;
   }
 
-  noLinksMsg.style.display = "none";
+  if (noLinksMsg) noLinksMsg.style.display = "none";
   let html = "";
 
   filteredLinks.forEach(link => {
     const slug = link.slug || "sem-apelido";
     const targetUrl = link.targetUrl || link.outputUrl || "";
     const clicks = link.clicks || 0;
-    const authorType = link.authorType || (link.encryptedData && link.encryptedData.author_type) || "visitante";
+    const authorType = link.authorType || "visitante";
     const isGoogle = authorType === "google";
     const isGithub = authorType === "github";
-    const isRegistered = isGoogle || isGithub || (link.authorUsername && link.authorUsername !== "visitante");
-    const authorDisplay = link.authorName || (link.authorUsername ? `@${link.authorUsername}` : (isGoogle ? "Google" : isGithub ? "GitHub" : "Visitante"));
+    const cleanUser = link.authorUsername || (isGoogle ? "google" : isGithub ? "github" : "visitante");
+    const authorDisplay = `@${cleanUser}`;
     const dateFormatted = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recente";
+    const isChecked = selectedSlugs.has(slug);
 
     html += `
-      <tr>
+      <tr style="${isChecked ? 'background: rgba(56, 189, 248, 0.08);' : ''}">
+        <td class="table-checkbox-cell" style="${isAdmin ? '' : 'display: none;'}">
+          <input type="checkbox" class="table-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleSelectLink('${escapeHtml(slug)}', this.checked)" />
+        </td>
         <td>
           <div style="display: flex; flex-direction: column; gap: 0.2rem;">
             <div style="display: flex; align-items: center; gap: 0.4rem;">
@@ -221,30 +471,36 @@ function renderLinksTable() {
           </div>
         </td>
         <td>
-          <span style="max-width: 240px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; color: var(--text-secondary);" title="${escapeHtml(targetUrl)}">
+          <span style="max-width: 220px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; color: var(--text-secondary);" title="${escapeHtml(targetUrl)}">
             ${escapeHtml(targetUrl)}
           </span>
         </td>
         <td>
           ${isGoogle ? `
-            <span class="badge" style="background: rgba(66, 133, 244, 0.12); color: #93c5fd; border: 1px solid rgba(66, 133, 244, 0.3); font-size: 0.75rem; padding: 0.2rem 0.5rem; display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 500;">
-              <svg width="13" height="13" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              ${escapeHtml(authorDisplay)}
-            </span>
+            <button type="button" onclick="filterByUser('${escapeHtml(cleanUser)}')" class="badge" style="background: rgba(66, 133, 244, 0.12); color: #93c5fd; border: 1px solid rgba(66, 133, 244, 0.3); font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 600; cursor: pointer;" title="Filtrar links deste usuário Google">
+              ${getGoogleIconSvg()}
+              <span>${escapeHtml(authorDisplay)}</span>
+            </button>
           ` : isGithub ? `
-            <span class="badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); font-size: 0.75rem; padding: 0.2rem 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-              ${escapeHtml(authorDisplay)}
-            </span>
+            <button type="button" onclick="filterByUser('${escapeHtml(cleanUser)}')" class="badge" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 600; cursor: pointer;" title="Filtrar links deste usuário GitHub">
+              ${getGithubIconSvg()}
+              <span>${escapeHtml(authorDisplay)}</span>
+            </button>
           ` : `
-            <span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); font-size: 0.75rem; padding: 0.2rem 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500;">
+            <span class="badge" style="background: rgba(148, 163, 184, 0.12); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 0.3rem; font-weight: 500;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
               Visitante
+            </span>
+          `}
+        </td>
+        <td>
+          ${link.isPasswordProtected ? `
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75rem; padding: 0.2rem 0.45rem;">
+              🔒 Protegido
+            </span>
+          ` : `
+            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.75rem; padding: 0.2rem 0.45rem;">
+              🌐 Aberto
             </span>
           `}
         </td>
@@ -259,13 +515,13 @@ function renderLinksTable() {
         </td>
         <td class="td-actions">
           <div class="table-actions" style="justify-content: flex-end;">
-            <button class="btn btn-secondary btn-sm" onclick="copyLink(decodeURIComponent('${encodeURIComponent(link.outputUrl || '')}'))" title="Copiar Link Criptografado">
+            <button class="btn btn-secondary btn-sm" onclick="copyLink(decodeURIComponent('${encodeURIComponent(link.outputUrl || '')}'))" title="Copiar Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
             <a href="${escapeHtml(link.outputUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Testar / Abrir Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </a>
-            <button class="btn btn-secondary btn-sm" onclick="openEditModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Editar Apelido ou Dados">
+            <button class="btn btn-secondary btn-sm" onclick="openEditModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Editar Link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
             <button class="btn btn-danger btn-sm" onclick="deleteLink(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Excluir Link">
@@ -278,6 +534,158 @@ function renderLinksTable() {
   });
 
   tbody.innerHTML = html;
+  updateBatchBar();
+}
+
+// Renderiza a seção de usuários registrados
+function renderUsersGrid() {
+  const container = document.querySelector("#users-grid-container");
+  if (!container) return;
+
+  if (uniqueUsersList.length === 0) {
+    container.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 2rem; grid-column: 1 / -1;">Nenhum usuário registrado encontrado.</div>`;
+    return;
+  }
+
+  let html = "";
+  uniqueUsersList.forEach(u => {
+    const isGoogle = u.provider === "google";
+    const isGithub = u.provider === "github";
+    const displayUser = u.username ? `@${u.username}` : "Visitante Anônimo";
+
+    html += `
+      <div class="user-card">
+        <div class="user-card-header">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #111a2e; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            ${isGoogle ? '🔴' : isGithub ? '🐙' : '👤'}
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              ${isGoogle ? getGoogleIconSvg() : isGithub ? getGithubIconSvg() : ''}
+              <strong style="color: #fff; font-size: 0.95rem;">${escapeHtml(displayUser)}</strong>
+            </div>
+            <span style="font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
+              ${escapeHtml(u.provider)}
+            </span>
+          </div>
+        </div>
+
+        <div class="user-card-stats">
+          <div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;">
+              ${u.linkCount}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Links Criados</div>
+          </div>
+          <div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #6ee7b7; font-family: 'JetBrains Mono', monospace;">
+              ${u.clickCount}
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Cliques Totais</div>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-secondary btn-sm" onclick="filterByUser('${escapeHtml(u.username)}')" style="width: 100%; justify-content: center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+          <span>Ver Links Deste Usuário</span>
+        </button>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+// Filtra rapidamente por um usuário específico vindo de badges ou cards
+function filterByUser(username) {
+  switchDashboardTab("admin-all");
+  const select = document.querySelector("#filter-user-select");
+  if (select) {
+    select.value = username || "all";
+  }
+  filterLinks();
+}
+
+// Gerenciamento de Seleção e Ações em Lote
+function toggleSelectLink(slug, isChecked) {
+  if (isChecked) {
+    selectedSlugs.add(slug);
+  } else {
+    selectedSlugs.delete(slug);
+  }
+  updateBatchBar();
+}
+
+function toggleSelectAllLinks(isChecked) {
+  if (isChecked) {
+    filteredLinks.forEach(l => {
+      if (l.slug) selectedSlugs.add(l.slug);
+    });
+  } else {
+    selectedSlugs.clear();
+  }
+  renderLinksTable();
+  updateBatchBar();
+}
+
+function deselectAllLinks() {
+  selectedSlugs.clear();
+  const selectAllCb = document.querySelector("#select-all-checkbox");
+  if (selectAllCb) selectAllCb.checked = false;
+  updateBatchBar();
+  renderLinksTable();
+}
+
+function updateBatchBar() {
+  const batchBar = document.querySelector("#batch-actions-bar");
+  const countSpan = document.querySelector("#batch-selected-count");
+  const selectAllCb = document.querySelector("#select-all-checkbox");
+
+  if (!batchBar || !countSpan) return;
+
+  const count = selectedSlugs.size;
+  if (count > 0) {
+    batchBar.style.display = "flex";
+    countSpan.innerText = `${count} ${count === 1 ? 'link selecionado' : 'links selecionados'}`;
+    if (selectAllCb) {
+      selectAllCb.checked = filteredLinks.length > 0 && filteredLinks.every(l => selectedSlugs.has(l.slug));
+    }
+  } else {
+    batchBar.style.display = "none";
+    if (selectAllCb) selectAllCb.checked = false;
+  }
+}
+
+async function deleteSelectedBatchLinks() {
+  const count = selectedSlugs.size;
+  if (count === 0) return;
+
+  const slugsArray = Array.from(selectedSlugs);
+  const msg = `Atenção: Você está prestes a excluir <strong>${count} links permanentemente</strong> do banco de dados. Esta ação não pode ser desfeita.`;
+
+  openDeleteModal("", async () => {
+    const btn = document.querySelector("#btn-batch-delete");
+    if (btn) btn.disabled = true;
+
+    try {
+      if (window.supabaseDb) {
+        await window.supabaseDb.deleteLinksBatch(slugsArray);
+      }
+
+      slugsArray.forEach(s => {
+        if (window.clickTracker) window.clickTracker.resetLink(s);
+      });
+
+      selectedSlugs.clear();
+      showToast(`${count} links foram excluídos permanentemente com sucesso!`);
+      await loadDashboardData();
+    } catch (e) {
+      console.error("Erro na exclusão em lote:", e);
+      alert("Erro ao excluir links em lote. Tente novamente.");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }, `Excluir ${count} Links em Lote`, msg);
 }
 
 // Modal de Edição de Link
@@ -317,7 +725,7 @@ function openEditModal(slug) {
   } else {
     if (securityBadge) {
       securityBadge.className = "badge badge-info";
-      securityBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Link Aberto (Sem Senha)`;
+      securityBadge.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Link Aberto (Sem Senha)`;
     }
     if (removePasswordGroup) removePasswordGroup.style.display = "none";
     if (removePasswordCheckbox) removePasswordCheckbox.checked = false;
@@ -380,7 +788,7 @@ async function checkEditSlugAvailability() {
     .replace(/[@#?&/\\:]+/g, "")
     .toLowerCase();
 
-  // 1. Verificação de profanidade / termos vulgares
+  // 1. Verificação de profanidade
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
     statusEl.style.display = "flex";
     statusEl.className = "slug-status exists";
@@ -430,13 +838,11 @@ async function saveEditedLink(e) {
     return;
   }
 
-  // 1. Validação de profanidade
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
     alert("O apelido personalizado contém termos impróprios ou palavras de baixo calão não permitidas.");
     return;
   }
 
-  // 2. Validação de disponibilidade caso o apelido tenha mudado
   if (newSlug !== originalSlug.toLowerCase()) {
     if (window.supabaseDb) {
       const exists = await window.supabaseDb.exists(newSlug);
@@ -447,7 +853,6 @@ async function saveEditedLink(e) {
     }
   }
 
-  // 3. Validação de segurança da URL
   try {
     const parsed = new URL(newTargetUrl);
     if (!(parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "magnet:")) {
@@ -459,7 +864,6 @@ async function saveEditedLink(e) {
     return;
   }
 
-  // 4. Validação de confirmação de senha
   if (newPassword && newPassword !== confirmPassword) {
     alert("As senhas digitadas não coincidem. Verifique e tente novamente.");
     const confirmInput = document.querySelector("#edit-password-confirm");
@@ -482,7 +886,6 @@ async function saveEditedLink(e) {
   try {
     let enc = null;
 
-    // Cenário A: Usuário definiu uma NOVA SENHA (ou alterou a existente)
     if (newPassword) {
       const api = apiVersions['0.0.1'];
       const salt = await api.randomSalt();
@@ -496,21 +899,16 @@ async function saveEditedLink(e) {
         i: b64.binaryToBase64(iv)
       };
       if (newHint) enc.h = newHint;
-    }
-    // Cenário B: Usuário marcou para REMOVER A SENHA
-    else if (removePassword) {
+    } else if (removePassword) {
       enc = {
         v: "0.0.1",
         open: true,
         u: newTargetUrl
       };
       if (newHint) enc.h = newHint;
-    }
-    // Cenário C: Campos de senha em branco e não marcou para remover senha (manter proteção atual)
-    else {
+    } else {
       const hadPassword = !!(link.encryptedData && link.encryptedData.e);
       if (hadPassword) {
-        // Se a URL de destino mudou mas não foi digitada nova senha, exige a senha para recriptografar com segurança
         if (link.targetUrl && newTargetUrl !== link.targetUrl) {
           alert("Para alterar a URL de destino de um link protegido por senha, digite a nova senha (ou redigite a atual) para que a nova URL seja criptografada com segurança.");
           if (saveBtn) {
@@ -526,7 +924,6 @@ async function saveEditedLink(e) {
         if (newHint) enc.h = newHint;
         else delete enc.h;
       } else {
-        // Link aberto
         enc = {
           v: "0.0.1",
           open: true,
@@ -536,12 +933,10 @@ async function saveEditedLink(e) {
       }
     }
 
-    // Preserva metadados de autoria do criador
     if (link.authorType) enc.author_type = link.authorType;
     if (link.authorUsername) enc.author_username = link.authorUsername;
     if (link.authorName) enc.author_name = link.authorName;
 
-    // Atualiza no banco de dados Supabase
     if (window.supabaseDb) {
       await window.supabaseDb.updateLink(originalSlug, {
         newSlug: newSlug,
@@ -551,28 +946,8 @@ async function saveEditedLink(e) {
       });
     }
 
-    // Atualiza também no localStorage local se estiver registrado
-    try {
-      const localRaw = localStorage.getItem("linklock_saved_custom_links");
-      if (localRaw) {
-        const localList = JSON.parse(localRaw);
-        const idx = localList.findIndex(l => l.slug && l.slug.toLowerCase() === originalSlug.toLowerCase());
-        if (idx !== -1) {
-          const baseUrl = new URL('../', window.location.href).href;
-          const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-          
-          localList[idx].slug = newSlug;
-          localList[idx].targetUrl = newTargetUrl;
-          localList[idx].hint = newHint;
-          localList[idx].encryptedData = enc;
-          localList[idx].outputUrl = `${cleanBaseUrl}${encodeURIComponent(newSlug)}`;
-          localStorage.setItem("linklock_saved_custom_links", JSON.stringify(localList));
-        }
-      }
-    } catch {}
-
     closeEditModal();
-    showToast("Link e credenciais atualizados no banco de dados com sucesso!");
+    showToast("Link atualizado no banco de dados com sucesso!");
     await loadDashboardData();
   } catch (err) {
     console.error("[Painel] Erro ao salvar edição do link:", err);
@@ -600,7 +975,6 @@ function copyLink(url) {
   });
 }
 
-// Abre a tela modal moderna de confirmação de exclusão permanente no painel
 function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
   let modal = document.querySelector("#confirm-delete-modal");
   if (!modal) {
@@ -611,8 +985,8 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
   }
 
   const title = customTitle || "Confirmar Exclusão Permanente";
-  const targetText = slug ? `/${slug}` : "Link selecionado";
-  const msg = customMsg || `Atenção: Este link será <strong>excluído permanentemente</strong> do seu painel e <strong>não poderá ser recuperado</strong>. O identificador será liberado para novos cadastros.`;
+  const targetText = slug ? `/${slug}` : (selectedSlugs.size > 0 ? `${selectedSlugs.size} links selecionados` : "Link selecionado");
+  const msg = customMsg || `Atenção: Este link será <strong>excluído permanentemente</strong> do banco de dados e <strong>não poderá ser recuperado</strong>.`;
 
   modal.innerHTML = `
     <div class="modal-card" style="max-width: 450px; text-align: center; padding: 2rem 1.75rem;">
@@ -642,7 +1016,7 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
         <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()" style="flex: 1; padding: 0.75rem 1rem;">
           Cancelar
         </button>
-        <button type="button" id="confirm-delete-action-btn" class="btn btn-danger" style="flex: 1.2; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem;">
+        <button type="button" id="confirm-delete-action-btn" class="btn btn-danger" style="flex: 1.2; padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.45rem; background: #dc2626; border: 1px solid #ef4444;">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -668,44 +1042,37 @@ function openDeleteModal(slug, onConfirm, customTitle, customMsg) {
 
 function closeDeleteModal() {
   const modal = document.querySelector("#confirm-delete-modal");
-  if (modal) {
-    modal.style.display = "none";
-  }
+  if (modal) modal.style.display = "none";
 }
 
 function deleteLink(slug) {
   openDeleteModal(slug, async () => {
     try {
-      // 1. Remove do Supabase Cloud imediatamente
       if (window.supabaseDb && slug) {
         await window.supabaseDb.deleteLink(slug);
       }
 
-      // 2. Limpa tracker local caso exista
       if (window.clickTracker && slug) {
         window.clickTracker.resetLink(slug);
       }
 
-      // 3. Recarrega as informações exclusivamente do banco de dados na nuvem
-      showToast(`Link "/${slug}" excluído permanentemente do banco de dados.`);
+      selectedSlugs.delete(slug);
+      showToast(`Link "/${slug}" excluído com sucesso.`);
       await loadDashboardData();
     } catch (e) {
-      console.error("Erro ao excluir link no painel:", e);
+      console.error("Erro ao excluir link:", e);
     }
   });
 }
 
-// Sanitização contra CSV Formula Injection (CWE-1236)
 function sanitizeCsvValue(val) {
   let str = String(val == null ? "" : val);
-  // Se iniciar com caracteres especiais de fórmula (=, +, -, @, tab, retorno de carro), prefixa com apóstrofo
   if (/^[=+\-@\t\r]/.test(str)) {
     str = "'" + str;
   }
   return `"${str.replace(/"/g, '""')}"`;
 }
 
-// Exportação de Dados
 function exportData(format) {
   if (!allLinks || allLinks.length === 0) {
     alert("Não há links cadastrados para exportar.");
@@ -721,10 +1088,12 @@ function exportData(format) {
     mimeType = "application/json";
     filename = `shortener_links_backup_${new Date().toISOString().slice(0, 10)}.json`;
   } else if (format === "csv") {
-    const headers = ["Apelido", "URL Destino", "Cliques", "Dica", "Data Criacao", "Link Completo"];
+    const headers = ["Apelido", "URL Destino", "Criador", "Provedor", "Cliques", "Dica", "Data Criacao", "Link Completo"];
     const rows = allLinks.map(l => [
       sanitizeCsvValue(l.slug),
       sanitizeCsvValue(l.targetUrl),
+      sanitizeCsvValue(l.authorName || l.authorUsername),
+      sanitizeCsvValue(l.authorType),
       Number(l.clicks) || 0,
       sanitizeCsvValue(l.hint),
       sanitizeCsvValue(l.createdAt),
@@ -768,3 +1137,14 @@ function escapeHtml(string) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
+
+window.loadDashboardData = loadDashboardData;
+window.initDashboard = initDashboard;
+window.deleteLink = deleteLink;
+window.saveEditedLink = saveEditedLink;
+window.switchDashboardTab = switchDashboardTab;
+window.filterByUser = filterByUser;
+window.toggleSelectLink = toggleSelectLink;
+window.toggleSelectAllLinks = toggleSelectAllLinks;
+window.deselectAllLinks = deselectAllLinks;
+window.deleteSelectedBatchLinks = deleteSelectedBatchLinks;

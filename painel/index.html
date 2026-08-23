@@ -8,22 +8,22 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/png" href="../favicon.png?v=34.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=34.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=34.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=36.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=36.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=36.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=34.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=36.0" type="text/css" />
 
-  <script type="text/javascript" src="../b64.js?v=35.0"></script>
-  <script type="text/javascript" src="../api.js?v=35.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=35.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=35.0"></script>
-  <script type="text/javascript" src="../auth.js?v=35.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=35.0"></script>
-  <script type="text/javascript" src="painel.js?v=35.0"></script>
+  <script type="text/javascript" src="../b64.js?v=36.0"></script>
+  <script type="text/javascript" src="../api.js?v=36.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=36.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=36.0"></script>
+  <script type="text/javascript" src="../auth.js?v=36.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=36.0"></script>
+  <script type="text/javascript" src="painel.js?v=36.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -124,6 +124,25 @@
 
     <!-- Conteúdo Principal do Dashboard (Exibido apenas para usuários autenticados) -->
     <div id="dashboard-content">
+      <!-- Abas Exclusivas do Administrador (@dougretrogames) -->
+      <div id="admin-tabs-container" class="admin-tabs-bar" style="display: none;">
+        <button type="button" class="admin-tab-btn active" id="tab-my-links" onclick="switchDashboardTab('my-links')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span>Meus Links</span>
+          <span class="admin-tab-badge" id="tab-my-links-count">0</span>
+        </button>
+        <button type="button" class="admin-tab-btn" id="tab-admin-all" onclick="switchDashboardTab('admin-all')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>Painel Geral (Admin)</span>
+          <span class="admin-tab-badge" id="tab-admin-all-count">0</span>
+        </button>
+        <button type="button" class="admin-tab-btn" id="tab-admin-users" onclick="switchDashboardTab('admin-users')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Usuários Registrados</span>
+          <span class="admin-tab-badge" id="tab-admin-users-count">0</span>
+        </button>
+      </div>
+
       <!-- Banner de Boas-Vindas / Status de Sessão -->
       <section class="page-header" style="text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
       <div>
@@ -158,7 +177,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
         </div>
         <div class="stat-value" id="stat-total-links">0</div>
-        <div class="stat-label">Links Criados</div>
+        <div class="stat-label" id="stat-label-links">Links Criados</div>
       </div>
 
       <div class="stat-card">
@@ -182,24 +201,54 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         </div>
         <div class="stat-value" id="stat-avg-clicks" style="color: #c4b5fd;">0.0</div>
-        <div class="stat-label">Média Cliques/Link</div>
+        <div class="stat-label" id="stat-label-avg">Média Cliques/Link</div>
       </div>
     </div>
 
-    <!-- Tabela & Gerenciador de Links -->
-    <div class="card">
-      <div class="search-filter-bar">
-        <div class="search-input-wrapper">
+    <!-- Barra de Ações em Lote (Fixa/Flutuante ao selecionar links) -->
+    <div id="batch-actions-bar" class="batch-actions-bar" style="display: none;">
+      <div class="batch-actions-info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        <span id="batch-selected-count">0 links selecionados</span>
+      </div>
+      <div class="batch-actions-btns">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllLinks()">Desmarcar Todos</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSelectedBatchLinks()" id="btn-batch-delete" style="background: #dc2626; color: #fff; border: 1px solid #ef4444;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span>Excluir Selecionados em Lote</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 1: Tabela & Gerenciador de Links -->
+    <div class="card" id="table-view-section">
+      <div class="search-filter-bar" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <div class="search-input-wrapper" style="flex: 1; min-width: 220px;">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="search-input" placeholder="Buscar por apelido, URL ou dica..." oninput="filterLinks()" />
+          <input type="text" id="search-input" placeholder="Buscar por apelido, URL ou usuário..." oninput="filterLinks()" />
         </div>
 
+        <!-- Filtro por Usuário (Admin) -->
+        <select id="filter-user-select" onchange="filterLinks()" style="display: none; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.6rem 0.85rem; font-family: inherit; font-size: 0.88rem; outline: none;">
+          <option value="all">Todos os Usuários</option>
+        </select>
+
+        <!-- Filtro por Provedor (Admin) -->
+        <select id="filter-provider-select" onchange="filterLinks()" style="display: none; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.6rem 0.85rem; font-family: inherit; font-size: 0.88rem; outline: none;">
+          <option value="all">Todos os Provedores</option>
+          <option value="google">Apenas Google</option>
+          <option value="github">Apenas GitHub</option>
+          <option value="visitante">Apenas Visitantes</option>
+        </select>
+
+        <!-- Ordenação -->
         <select id="sort-select" onchange="filterLinks()" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); padding: 0.6rem 0.85rem; font-family: inherit; font-size: 0.88rem; outline: none;">
           <option value="date-desc">Mais Recentes</option>
           <option value="date-asc">Mais Antigos</option>
           <option value="clicks-desc">Mais Clicados</option>
           <option value="clicks-asc">Menos Clicados</option>
           <option value="name-asc">Ordem Alfabética (A-Z)</option>
+          <option value="user-asc">Ordem por Usuário</option>
         </select>
       </div>
 
@@ -207,9 +256,13 @@
         <table class="dashboard-table">
           <thead>
             <tr>
+              <th id="th-checkbox" class="table-checkbox-cell" style="display: none;">
+                <input type="checkbox" id="select-all-checkbox" class="table-checkbox" onchange="toggleSelectAllLinks(this.checked)" title="Selecionar todos os links visíveis" />
+              </th>
               <th>Apelido / Link</th>
               <th>Destino Original</th>
               <th>Criador</th>
+              <th>Tipo</th>
               <th>Cliques (Nuvem)</th>
               <th>Data de Criação</th>
               <th class="th-actions" style="text-align: right;">Ações</th>
@@ -223,8 +276,20 @@
 
       <div id="no-links-msg" style="display: none; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.5rem; opacity: 0.5;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-        <p style="font-size: 0.95rem; margin-bottom: 0.75rem;">Nenhum link encontrado no seu painel.</p>
+        <p style="font-size: 0.95rem; margin-bottom: 0.75rem;" id="no-links-text">Nenhum link encontrado no seu painel.</p>
         <a href="../criar" class="btn btn-primary btn-sm">Criar Primeiro Link</a>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 2: Visão de Usuários Registrados (Admin) -->
+    <div class="card" id="users-view-section" style="display: none;">
+      <div style="margin-bottom: 1.25rem;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.25rem;">Usuários Registrados no Sistema</h2>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin: 0;">Lista consolidada de contas do Google e GitHub que criaram links no banco de dados.</p>
+      </div>
+
+      <div class="users-grid" id="users-grid-container">
+        <!-- Renderizado dinamicamente via painel.js -->
       </div>
     </div>
   </div>
