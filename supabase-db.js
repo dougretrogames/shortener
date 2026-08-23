@@ -260,19 +260,19 @@ const supabaseDb = {
   async saveLink({ slug, encryptedData, hint, targetUrl, authorType, authorUsername, authorId, authorName, authorAvatar }) {
     if (!slug || !encryptedData) return false;
     const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanAuthorType = authorType || "visitante";
+    const cleanAuthorUsername = (authorUsername || (cleanAuthorType === "google" ? "google" : cleanAuthorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
+    const cleanAuthorId = authorId || (cleanAuthorType !== "visitante" ? `${cleanAuthorType}_${cleanAuthorUsername}` : null);
+    const cleanAuthorName = (cleanAuthorType !== "visitante") ? `@${cleanAuthorUsername}` : "Visitante";
     
     // Injeta os dados definitivos da conta criadora dentro de encrypted_data (JSONB)
     if (typeof encryptedData === "object" && encryptedData !== null) {
-      encryptedData.author_type = authorType || "visitante";
-      encryptedData.author_username = (authorUsername || (authorType === "google" ? "google" : authorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
-      encryptedData.author_id = authorId || ("user_" + Math.random().toString(36).substring(2));
-      encryptedData.author_name = authorName || (authorType === "google" ? "Google" : authorType === "github" ? "GitHub" : "Visitante");
+      encryptedData.author_type = cleanAuthorType;
+      encryptedData.author_username = cleanAuthorUsername;
+      encryptedData.author_id = cleanAuthorId;
+      encryptedData.author_name = cleanAuthorName;
       if (authorAvatar) encryptedData.author_avatar = authorAvatar;
     }
-
-    const finalAuthorType = authorType || "visitante";
-    const finalAuthorName = authorName || (finalAuthorType === "google" ? (authorName || "Google") : finalAuthorType === "github" ? (authorUsername ? `@${authorUsername}` : "GitHub") : "Visitante");
-    const finalAuthorId = authorId || (encryptedData ? encryptedData.author_id : null);
 
     try {
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
@@ -282,9 +282,9 @@ const supabaseDb = {
         hint: hint || null,
         clicks: 0,
         created_at: new Date().toISOString(),
-        author_type: finalAuthorType,
-        author_name: finalAuthorName,
-        author_id: finalAuthorId
+        author_type: cleanAuthorType,
+        author_name: cleanAuthorName,
+        author_id: cleanAuthorId
       };
 
       const res = await fetch(endpoint, {
@@ -317,10 +317,14 @@ const supabaseDb = {
         : {};
 
       const finalType = authorType || "google";
+      const cleanUser = (authorUsername || finalType).toLowerCase().replace(/^@/, '');
+      const finalId = authorId || `${finalType}_${cleanUser}`;
+      const finalName = `@${cleanUser}`;
+
       enc.author_type = finalType;
-      enc.author_username = (authorUsername || finalType).toLowerCase().replace(/^@/, '');
-      enc.author_id = authorId || `${finalType}_${enc.author_username}`;
-      enc.author_name = authorName || (finalType === "google" ? "Google" : `@${enc.author_username}`);
+      enc.author_username = cleanUser;
+      enc.author_id = finalId;
+      enc.author_name = finalName;
       if (authorAvatar) enc.author_avatar = authorAvatar;
 
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
@@ -333,9 +337,9 @@ const supabaseDb = {
         },
         body: JSON.stringify({
           encrypted_data: enc,
-          author_type: enc.author_type,
-          author_name: enc.author_name,
-          author_id: enc.author_id
+          author_type: finalType,
+          author_name: finalName,
+          author_id: finalId
         })
       });
 
@@ -346,13 +350,13 @@ const supabaseDb = {
     }
   },
 
-  // Sincroniza e preenche automaticamente a coluna author_id em links existentes que ainda estejam vazios
+  // Sincroniza e preenche automaticamente a coluna author_id e author_name em links existentes
   async syncUserLinksAuthorId(user) {
     if (!user || !user.username) return;
     const cleanUser = String(user.username).toLowerCase().replace(/^@/, '');
     const provider = user.provider || "github";
     const authorId = user.id || `${provider}_${cleanUser}`;
-    const authorName = user.name || (user.username ? `@${user.username}` : (provider === "google" ? "Google" : "GitHub"));
+    const authorName = `@${cleanUser}`;
     const authorAvatar = user.avatar || "";
 
     try {
@@ -361,14 +365,14 @@ const supabaseDb = {
 
       for (const link of userLinks) {
         const enc = (link.encrypted_data && typeof link.encrypted_data === "object") ? link.encrypted_data : {};
-        const isAuthorIdMissing = !link.author_id || !enc.author_id;
+        const needsSync = !link.author_id || !enc.author_id || (link.author_name && !link.author_name.startsWith("@")) || (enc.author_name && !enc.author_name.startsWith("@"));
 
-        if (isAuthorIdMissing) {
+        if (needsSync) {
           await this.updateLinkAuthor(link.slug, {
             authorType: link.author_type || enc.author_type || provider,
             authorUsername: enc.author_username || cleanUser,
             authorId: authorId,
-            authorName: link.author_name || enc.author_name || authorName,
+            authorName: authorName,
             authorAvatar: authorAvatar
           });
         }

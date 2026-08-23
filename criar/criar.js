@@ -667,7 +667,7 @@ async function onEncrypt() {
     const authorType = isCurrentlyAuth && authUser ? (authUser.provider || "github") : "visitante";
     const authorUsername = isCurrentlyAuth && authUser ? (authUser.username || "usuario").toLowerCase().replace(/^@/, '') : "visitante";
     const authorId = isCurrentlyAuth && authUser ? (authUser.id || `${authorType}_${authorUsername}`) : `guest_${Math.random().toString(36).substring(2)}`;
-    const authorName = isCurrentlyAuth && authUser ? (authUser.name || (authUser.username ? `@${authUser.username}` : (authorType === "google" ? "Google" : "GitHub"))) : "Visitante (Anônimo)";
+    const authorName = isCurrentlyAuth && authUser ? `@${authorUsername}` : "Visitante";
     const authorAvatar = isCurrentlyAuth && authUser ? (authUser.avatar || "") : "";
 
     // Salva no Supabase Nuvem com vinculação à conta criadora (Multi-Dispositivo)

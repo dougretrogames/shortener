@@ -414,13 +414,14 @@ async function applyUserSession(data, accessToken, refreshToken) {
 
   const rawUsername = meta.user_name || meta.preferred_username || idData.user_name || idData.login || (data.email ? data.email.split('@')[0] : "usuario");
   const cleanUsername = String(rawUsername).toLowerCase().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 39);
-  const fullName = meta.full_name || meta.name || idData.name || meta.display_name || (provider === "google" ? "Google" : "GitHub");
+  const userHandle = `@${cleanUsername}`;
   const avatar = meta.avatar_url || meta.picture || idData.avatar_url || idData.picture || (provider === "github" ? `https://avatars.githubusercontent.com/${cleanUsername}` : "");
 
   const userData = {
     id: data.id || (`${provider}_` + cleanUsername),
     username: cleanUsername,
-    name: fullName,
+    name: userHandle,
+    displayName: meta.full_name || meta.name || userHandle,
     email: data.email || `${cleanUsername}@${provider}.com`,
     avatar: avatar,
     provider: provider,
