@@ -8,24 +8,24 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/png" href="../favicon.png?v=44.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=44.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=44.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=45.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=45.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=45.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=44.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=45.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=44.0"></script>
-  <script type="text/javascript" src="../b64.js?v=44.0"></script>
-  <script type="text/javascript" src="../api.js?v=44.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=44.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=44.0"></script>
-  <script type="text/javascript" src="../auth.js?v=44.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=44.0"></script>
-  <script type="text/javascript" src="../totp.js?v=44.0"></script>
-  <script type="text/javascript" src="painel.js?v=44.0"></script>
+  <script type="text/javascript" src="../config.js?v=45.0"></script>
+  <script type="text/javascript" src="../b64.js?v=45.0"></script>
+  <script type="text/javascript" src="../api.js?v=45.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=45.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=45.0"></script>
+  <script type="text/javascript" src="../auth.js?v=45.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=45.0"></script>
+  <script type="text/javascript" src="../totp.js?v=45.0"></script>
+  <script type="text/javascript" src="painel.js?v=45.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -431,7 +431,7 @@
       </div>
 
       <!-- Passo 2: Validar Código -->
-      <div style="text-align: left; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem; cursor: pointer;" onclick="document.querySelector('#twofa-setup-pin').focus()">
+      <div style="text-align: left; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
           <span class="twofa-step-badge">2</span>
           <strong style="color: #fff; font-size: 0.88rem;">Digite o código de 6 dígitos gerado:</strong>
@@ -449,8 +449,6 @@
             placeholder="000000" 
             oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6);"
             onkeyup="if(event.key==='Enter') confirm2FASetup()" 
-            onclick="event.stopPropagation(); this.focus();"
-            ontouchstart="event.stopPropagation(); this.focus();"
           />
           <div id="twofa-setup-error" style="color: #f87171; font-size: 0.82rem; margin-top: 0.5rem; display: none;"></div>
         </div>
@@ -462,21 +460,17 @@
           id="btn-cancel-2fa-setup"
           class="btn btn-secondary" 
           onclick="close2FASetupModal()"
-          onpointerdown="event.stopPropagation()"
-          ontouchend="close2FASetupModal(); event.preventDefault();"
-          style="flex: 1; min-height: 48px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
-          <span style="pointer-events: none;">Cancelar</span>
+          style="flex: 1; min-height: 48px; font-weight: 600;">
+          Cancelar
         </button>
         <button 
           type="button" 
           id="btn-confirm-2fa-setup"
           class="btn btn-primary" 
           onclick="confirm2FASetup()"
-          onpointerdown="event.stopPropagation()"
-          ontouchend="confirm2FASetup(); event.preventDefault();"
-          style="flex: 1.3; min-height: 48px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span style="pointer-events: none;" id="btn-confirm-2fa-text">Confirmar e Ativar</span>
+          style="flex: 1.3; min-height: 48px; font-weight: 700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span id="btn-confirm-2fa-text">Confirmar e Ativar</span>
         </button>
       </div>
     </div>
@@ -498,7 +492,7 @@
         Abra o aplicativo <strong>Microsoft Authenticator</strong> no seu celular e digite o código de 6 dígitos para desbloquear as funções de administrador:
       </p>
 
-      <div style="margin-bottom: 1.5rem; cursor: pointer;" onclick="document.querySelector('#twofa-challenge-pin').focus()">
+      <div style="margin-bottom: 1.5rem;">
         <input 
           type="tel" 
           id="twofa-challenge-pin" 
@@ -510,8 +504,6 @@
           placeholder="000000" 
           oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6);"
           onkeyup="if(event.key==='Enter') verify2FAChallenge()"
-          onclick="event.stopPropagation(); this.focus();"
-          ontouchstart="event.stopPropagation(); this.focus();"
         />
         <div id="twofa-challenge-error" style="color: #f87171; font-size: 0.85rem; margin-top: 0.65rem; display: none;"></div>
       </div>
@@ -522,21 +514,17 @@
           id="btn-cancel-2fa-challenge"
           class="btn btn-secondary" 
           onclick="close2FAChallengeModal()"
-          onpointerdown="event.stopPropagation()"
-          ontouchend="close2FAChallengeModal(); event.preventDefault();"
-          style="flex: 1; min-height: 48px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
-          <span style="pointer-events: none;">Meus Links</span>
+          style="flex: 1; min-height: 48px; font-weight: 600;">
+          Meus Links
         </button>
         <button 
           type="button" 
           id="btn-verify-2fa-challenge"
           class="btn btn-primary" 
           onclick="verify2FAChallenge()"
-          onpointerdown="event.stopPropagation()"
-          ontouchend="verify2FAChallenge(); event.preventDefault();"
-          style="flex: 1.2; min-height: 48px; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span style="pointer-events: none;" id="btn-verify-2fa-text">Desbloquear Painel</span>
+          style="flex: 1.2; min-height: 48px; font-weight: 700;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <span id="btn-verify-2fa-text">Desbloquear Painel</span>
         </button>
       </div>
     </div>

@@ -2201,15 +2201,17 @@ footer a:hover {
    ========================================== */
 @media (max-width: 640px) {
   .modal-backdrop {
-    padding: 0.5rem;
+    padding: 0.75rem 0.5rem;
     align-items: flex-start;
   }
 
   .modal-card {
     padding: 1.25rem 1rem !important;
-    max-height: calc(100vh - 1rem) !important;
-    max-height: calc(100dvh - 1rem) !important;
-    margin: 0.5rem auto !important;
+    max-height: calc(100vh - 1.5rem) !important;
+    max-height: calc(100dvh - 1.5rem) !important;
+    margin: 0.5rem auto 2.5rem auto !important;
+    position: relative !important;
+    z-index: 1000 !important;
   }
 
   .twofa-qr-box {
