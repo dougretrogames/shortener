@@ -8,24 +8,24 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/png" href="../favicon.png?v=41.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=41.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=41.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=42.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=42.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=42.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=41.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=42.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=41.0"></script>
-  <script type="text/javascript" src="../b64.js?v=41.0"></script>
-  <script type="text/javascript" src="../api.js?v=41.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=41.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=41.0"></script>
-  <script type="text/javascript" src="../auth.js?v=41.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=41.0"></script>
-  <script type="text/javascript" src="../totp.js?v=41.0"></script>
-  <script type="text/javascript" src="painel.js?v=41.0"></script>
+  <script type="text/javascript" src="../config.js?v=42.0"></script>
+  <script type="text/javascript" src="../b64.js?v=42.0"></script>
+  <script type="text/javascript" src="../api.js?v=42.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=42.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=42.0"></script>
+  <script type="text/javascript" src="../auth.js?v=42.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=42.0"></script>
+  <script type="text/javascript" src="../totp.js?v=42.0"></script>
+  <script type="text/javascript" src="painel.js?v=42.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -266,7 +266,7 @@
               <th>Destino Original</th>
               <th>Criador</th>
               <th>Tipo</th>
-              <th>Cliques (Nuvem)</th>
+              <th>Cliques & Mini Gráfico</th>
               <th>Data de Criação</th>
               <th class="th-actions" style="text-align: right;">Ações</th>
             </tr>
@@ -522,6 +522,88 @@
           <span>Desativar Verificação em 2 Etapas</span>
         </button>
         <button type="button" class="btn btn-secondary" onclick="close2FAManageModal()" style="width: 100%; justify-content: center; margin-top: 0.5rem;">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Estatísticas e Gráficos do Link -->
+  <div id="modal-link-analytics" class="modal-backdrop" style="display: none;">
+    <div class="modal-card" style="max-width: 760px; width: 95%; max-height: 90vh; overflow-y: auto; text-align: left; padding: 1.75rem;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+            <span class="badge badge-info" id="analytics-type-badge">🔗 Link</span>
+            <span class="badge" id="analytics-security-badge">🔒 Protegido</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);" id="analytics-created-date">Criado em: --/--/----</span>
+          </div>
+          <h2 style="font-size: 1.4rem; font-weight: 800; color: #fff; margin: 0; font-family: 'JetBrains Mono', monospace;" id="analytics-slug-title">
+            /meu-link
+          </h2>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary); max-width: 550px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="analytics-target-url">
+            https://exemplo.com
+          </p>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeLinkAnalyticsModal()" style="padding: 0.4rem 0.65rem;" title="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Métricas Resumo -->
+      <div class="analytics-metrics-grid">
+        <div class="analytics-stat-card">
+          <div class="stat-value" id="analytics-total-clicks" style="color: var(--accent-primary); font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Cliques Totais</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div class="stat-value" id="analytics-current-month-clicks" style="color: #6ee7b7; font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Neste Mês</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div class="stat-value" id="analytics-avg-clicks" style="color: #c4b5fd; font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0.0</div>
+          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Média Diária</div>
+        </div>
+        <div class="analytics-stat-card">
+          <div class="stat-value" id="analytics-peak-clicks" style="color: #fbbf24; font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0</div>
+          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Pico de Acessos</div>
+        </div>
+      </div>
+
+      <!-- Barra de Controle do Gráfico -->
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.4rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <strong style="color: #fff; font-size: 0.95rem;" id="analytics-chart-heading">Gráfico Mensal (Desde a Criação)</strong>
+        </div>
+
+        <div style="display: flex; gap: 0.35rem; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.2rem;">
+          <button type="button" class="analytics-toggle-btn active" id="btn-toggle-monthly" onclick="switchAnalyticsViewMode('monthly')">
+            📆 Mensal (Desde a Criação)
+          </button>
+          <button type="button" class="analytics-toggle-btn" id="btn-toggle-daily" onclick="switchAnalyticsViewMode('daily')">
+            📅 Diário (Últimos 30 Dias)
+          </button>
+        </div>
+      </div>
+
+      <!-- Box do Gráfico SVG Interativo -->
+      <div id="analytics-chart-container" class="analytics-chart-box">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
+
+      <!-- Tabela / Lista de Detalhamento -->
+      <div style="margin-top: 1.5rem;">
+        <h4 style="font-size: 0.88rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem;">
+          Detalhamento de Acessos
+        </h4>
+        <div id="analytics-breakdown-list" style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(13, 20, 34, 0.5);">
+          <!-- Itens renderizados dinamicamente -->
+        </div>
+      </div>
+
+      <div style="margin-top: 1.5rem; text-align: right;">
+        <button type="button" class="btn btn-secondary" onclick="closeLinkAnalyticsModal()">
           Fechar
         </button>
       </div>

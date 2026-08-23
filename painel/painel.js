@@ -155,6 +155,7 @@ function mapRemoteRecord(remote, user) {
     authorName: authorName,
     authorId: remote.author_id || enc.author_id || null,
     isPasswordProtected: isPasswordProtected,
+    dailyClicks: (enc.daily_clicks && typeof enc.daily_clicks === "object") ? enc.daily_clicks : {},
     createdAt: remote.created_at || new Date().toISOString()
   };
 }
@@ -524,6 +525,7 @@ function renderLinksTable() {
     const dateFormatted = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recente";
     const isChecked = selectedSlugs.has(slug);
     const canEdit = isLinkOwner(link, user);
+    const sparklineSvg = generateSparklineSvg(link.dailyClicks, clicks, 7);
 
     html += `
       <tr style="${isChecked ? 'background: rgba(56, 189, 248, 0.08);' : ''}">
@@ -534,7 +536,7 @@ function renderLinksTable() {
           <div style="display: flex; flex-direction: column; gap: 0.2rem;">
             <div style="display: flex; align-items: center; gap: 0.4rem;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-              <strong style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace;">${escapeHtml(slug)}</strong>
+              <strong style="color: var(--accent-primary); font-family: 'JetBrains Mono', monospace; cursor: pointer;" onclick="openLinkAnalyticsModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Clique para ver gráficos de cliques detalhados">${escapeHtml(slug)}</strong>
             </div>
             ${link.hint ? `<small style="color: #a5b4fc; font-size: 0.78rem;">Dica: ${escapeHtml(link.hint)}</small>` : ''}
           </div>
@@ -574,10 +576,15 @@ function renderLinksTable() {
           `}
         </td>
         <td>
-          <span class="clicks-badge" title="Cliques contabilizados diretamente no banco de dados Supabase">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            ${clicks}
-          </span>
+          <div class="clicks-cell-wrapper" onclick="openLinkAnalyticsModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Clique para ver gráficos detalhados (diário e mensal de cada mês)">
+            <span class="clicks-badge" title="${clicks} cliques contabilizados">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              ${clicks}
+            </span>
+            <div class="sparkline-container" title="Tendência dos últimos 7 dias">
+              ${sparklineSvg}
+            </div>
+          </div>
         </td>
         <td style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">
           ${dateFormatted}
@@ -1399,6 +1406,356 @@ function disableAdmin2FA() {
   }
 }
 
+// =======================================================
+// Sparklines & Analytics do Link (Gráficos Diário e Mensal)
+// =======================================================
+let currentAnalyticsLink = null;
+let currentAnalyticsMode = "monthly"; // "monthly" | "daily"
+
+// Gera mini gráfico Sparkline SVG com os últimos 7 dias
+function generateSparklineSvg(dailyClicks, totalClicks, daysCount = 7) {
+  const days = [];
+  const now = new Date();
+  
+  for (let i = daysCount - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateKey = d.toISOString().slice(0, 10);
+    const formatted = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    const count = (dailyClicks && typeof dailyClicks === "object" && dailyClicks[dateKey]) 
+      ? Number(dailyClicks[dateKey]) 
+      : 0;
+    days.push({ dateKey, formatted, count });
+  }
+
+  // Se não houver histórico diário detalhado mas houver cliques totais, atribui ao período recente para renderização bonita
+  let sum = days.reduce((acc, curr) => acc + curr.count, 0);
+  if (totalClicks > 0 && sum === 0) {
+    days[days.length - 1].count = totalClicks;
+    sum = totalClicks;
+  }
+
+  let maxVal = Math.max(...days.map(d => d.count), 1);
+
+  const barWidth = 5;
+  const barGap = 3;
+  const svgHeight = 20;
+  const svgWidth = daysCount * (barWidth + barGap);
+
+  let barsHtml = "";
+  days.forEach((d, idx) => {
+    const x = idx * (barWidth + barGap);
+    const barHeight = d.count > 0 ? Math.max(3, Math.round((d.count / maxVal) * (svgHeight - 4))) : 2;
+    const y = svgHeight - barHeight;
+    const fill = d.count > 0 ? "url(#sparkline-grad)" : "rgba(148, 163, 184, 0.25)";
+    const tooltip = `${d.formatted}: ${d.count} ${d.count === 1 ? 'clique' : 'cliques'}`;
+
+    barsHtml += `
+      <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" rx="1.5" fill="${fill}" class="sparkline-bar">
+        <title>${tooltip}</title>
+      </rect>
+    `;
+  });
+
+  return `
+    <svg width="${svgWidth}" height="${svgHeight}" class="sparkline-svg" viewBox="0 0 ${svgWidth} ${svgHeight}">
+      <defs>
+        <linearGradient id="sparkline-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+      </defs>
+      ${barsHtml}
+    </svg>
+  `;
+}
+
+// Abre o Modal de Analytics do Link
+function openLinkAnalyticsModal(slug) {
+  const link = allSystemLinks.find(l => (l.slug || "").toLowerCase() === slug.toLowerCase())
+    || allLinks.find(l => (l.slug || "").toLowerCase() === slug.toLowerCase());
+  
+  if (!link) return;
+  currentAnalyticsLink = link;
+
+  const slugTitle = document.querySelector("#analytics-slug-title");
+  const targetUrlEl = document.querySelector("#analytics-target-url");
+  const createdDateEl = document.querySelector("#analytics-created-date");
+  const securityBadge = document.querySelector("#analytics-security-badge");
+  const typeBadge = document.querySelector("#analytics-type-badge");
+
+  if (slugTitle) slugTitle.innerText = `/${link.slug}`;
+  if (targetUrlEl) {
+    targetUrlEl.innerText = link.targetUrl || "Link Protegido";
+    targetUrlEl.title = link.targetUrl || "";
+  }
+  if (createdDateEl) {
+    const d = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric' }) : "Data inicial";
+    createdDateEl.innerText = `Criado em: ${d}`;
+  }
+  if (securityBadge) {
+    securityBadge.className = link.isPasswordProtected ? "badge badge-warning" : "badge badge-success";
+    securityBadge.innerHTML = link.isPasswordProtected ? "🔒 Protegido" : "🌐 Aberto";
+  }
+  if (typeBadge) {
+    typeBadge.innerText = link.authorType === "google" ? "🔴 Google" : link.authorType === "github" ? "🐙 GitHub" : "👤 Visitante";
+  }
+
+  renderAnalyticsModalContent();
+
+  const modal = document.querySelector("#modal-link-analytics");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeLinkAnalyticsModal() {
+  const modal = document.querySelector("#modal-link-analytics");
+  if (modal) modal.style.display = "none";
+}
+
+function switchAnalyticsViewMode(mode) {
+  currentAnalyticsMode = mode;
+  const btnMonthly = document.querySelector("#btn-toggle-monthly");
+  const btnDaily = document.querySelector("#btn-toggle-daily");
+  const heading = document.querySelector("#analytics-chart-heading");
+
+  if (btnMonthly) btnMonthly.className = mode === "monthly" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
+  if (btnDaily) btnDaily.className = mode === "daily" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
+  if (heading) {
+    heading.innerText = mode === "monthly" ? "Gráfico Mensal (Desde a Criação)" : "Gráfico Diário (Últimos 30 Dias)";
+  }
+
+  renderAnalyticsModalContent();
+}
+
+function renderAnalyticsModalContent() {
+  if (!currentAnalyticsLink) return;
+  const link = currentAnalyticsLink;
+  const dailyClicks = link.dailyClicks || {};
+  const totalClicks = Number(link.clicks) || 0;
+
+  const totalClicksEl = document.querySelector("#analytics-total-clicks");
+  const curMonthClicksEl = document.querySelector("#analytics-current-month-clicks");
+  const avgClicksEl = document.querySelector("#analytics-avg-clicks");
+  const peakClicksEl = document.querySelector("#analytics-peak-clicks");
+  const chartContainer = document.querySelector("#analytics-chart-container");
+  const breakdownList = document.querySelector("#analytics-breakdown-list");
+
+  if (totalClicksEl) totalClicksEl.innerText = totalClicks;
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  if (currentAnalyticsMode === "monthly") {
+    // ==========================================
+    // MODO MENSAL (Todos os meses desde a criação)
+    // ==========================================
+    const createdDate = link.createdAt ? new Date(link.createdAt) : new Date();
+    const startYear = createdDate.getFullYear();
+    const startMonth = createdDate.getMonth();
+    const endYear = now.getFullYear();
+    const endMonth = now.getMonth();
+
+    const monthsData = [];
+    let curY = startYear;
+    let curM = startMonth;
+
+    while (curY < endYear || (curY === endYear && curM <= endMonth)) {
+      const monthKey = `${curY}-${String(curM + 1).padStart(2, '0')}`;
+      const monthDate = new Date(curY, curM, 1);
+      const label = monthDate.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
+      
+      // Soma cliques do mês em daily_clicks
+      let mClicks = 0;
+      Object.keys(dailyClicks).forEach(k => {
+        if (k.startsWith(monthKey)) {
+          mClicks += Number(dailyClicks[k]) || 0;
+        }
+      });
+
+      monthsData.push({
+        key: monthKey,
+        label: label,
+        fullName: monthDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+        clicks: mClicks
+      });
+
+      curM++;
+      if (curM > 11) {
+        curM = 0;
+        curY++;
+      }
+    }
+
+    // Se houver discrepância por cliques anteriores ao histórico detalhado
+    let sumMonthly = monthsData.reduce((acc, curr) => acc + curr.clicks, 0);
+    if (totalClicks > sumMonthly && monthsData.length > 0) {
+      monthsData[0].clicks += (totalClicks - sumMonthly);
+    }
+
+    const thisMonthObj = monthsData.find(m => m.key === currentMonthKey);
+    if (curMonthClicksEl) curMonthClicksEl.innerText = thisMonthObj ? thisMonthObj.clicks : 0;
+
+    const avg = monthsData.length > 0 ? (totalClicks / monthsData.length).toFixed(1) : "0.0";
+    if (avgClicksEl) avgClicksEl.innerText = `${avg}/mês`;
+
+    const peak = monthsData.reduce((max, m) => m.clicks > max ? m.clicks : max, 0);
+    if (peakClicksEl) peakClicksEl.innerText = `${peak} max`;
+
+    // Renderiza SVG Gráfico Mensal
+    renderSvgBarChart(chartContainer, monthsData, totalClicks);
+
+    // Renderiza Lista de Detalhamento Mensal
+    renderBreakdownTable(breakdownList, monthsData, totalClicks);
+  } else {
+    // ==========================================
+    // MODO DIÁRIO (Últimos 30 dias)
+    // ==========================================
+    const daysData = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().slice(0, 10);
+      const label = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      const fullName = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+      const clicks = (dailyClicks && dailyClicks[dateKey]) ? Number(dailyClicks[dateKey]) : 0;
+
+      daysData.push({
+        key: dateKey,
+        label: label,
+        fullName: fullName,
+        clicks: clicks
+      });
+    }
+
+    let sumDaily = daysData.reduce((acc, curr) => acc + curr.clicks, 0);
+    if (totalClicks > 0 && sumDaily === 0 && daysData.length > 0) {
+      daysData[daysData.length - 1].clicks = totalClicks;
+      sumDaily = totalClicks;
+    }
+
+    const thisMonthClicks = Object.keys(dailyClicks)
+      .filter(k => k.startsWith(currentMonthKey))
+      .reduce((acc, k) => acc + (Number(dailyClicks[k]) || 0), 0);
+    if (curMonthClicksEl) curMonthClicksEl.innerText = thisMonthClicks || totalClicks;
+
+    const avg = (sumDaily / 30).toFixed(1);
+    if (avgClicksEl) avgClicksEl.innerText = `${avg}/dia`;
+
+    const peak = daysData.reduce((max, d) => d.clicks > max ? d.clicks : max, 0);
+    if (peakClicksEl) peakClicksEl.innerText = `${peak} max`;
+
+    // Renderiza SVG Gráfico Diário
+    renderSvgBarChart(chartContainer, daysData, totalClicks);
+
+    // Renderiza Lista de Detalhamento Diário
+    renderBreakdownTable(breakdownList, daysData, totalClicks);
+  }
+}
+
+// Renderizador Universal de Gráficos de Barra SVG
+function renderSvgBarChart(container, dataPoints, totalClicks) {
+  if (!container) return;
+
+  if (!dataPoints || dataPoints.length === 0) {
+    container.innerHTML = `<div style="color: var(--text-muted); font-size: 0.9rem;">Nenhum dado de cliques registrado até o momento.</div>`;
+    return;
+  }
+
+  const maxVal = Math.max(...dataPoints.map(d => d.clicks), 1);
+  const chartHeight = 170;
+  const paddingBottom = 26;
+  const paddingTop = 22;
+  const usableHeight = chartHeight - paddingBottom - paddingTop;
+  
+  const totalBars = dataPoints.length;
+  const svgWidth = Math.max(520, totalBars * 46);
+
+  let barsSvg = "";
+  const slotWidth = svgWidth / totalBars;
+  const barWidth = Math.min(28, slotWidth * 0.65);
+
+  dataPoints.forEach((item, idx) => {
+    const xCenter = (idx * slotWidth) + (slotWidth / 2);
+    const x = xCenter - (barWidth / 2);
+    const barH = item.clicks > 0 ? Math.max(6, Math.round((item.clicks / maxVal) * usableHeight)) : 3;
+    const y = chartHeight - paddingBottom - barH;
+    const fill = item.clicks > 0 ? "url(#chart-bar-grad)" : "rgba(148, 163, 184, 0.15)";
+    const percent = totalClicks > 0 ? ((item.clicks / totalClicks) * 100).toFixed(1) : 0;
+    const tooltipText = `${item.fullName || item.label}: ${item.clicks} cliques (${percent}%)`;
+
+    barsSvg += `
+      <g class="chart-bar-group">
+        <!-- Barra -->
+        <rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" rx="3" fill="${fill}" class="chart-bar-rect">
+          <title>${tooltipText}</title>
+        </rect>
+        
+        <!-- Valor acima da barra se houver cliques -->
+        ${item.clicks > 0 ? `
+          <text x="${xCenter}" y="${y - 5}" fill="#38bdf8" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace" text-anchor="middle">
+            ${item.clicks}
+          </text>
+        ` : ''}
+
+        <!-- Legenda do Eixo X -->
+        <text x="${xCenter}" y="${chartHeight - 8}" fill="var(--text-muted)" font-size="10" font-family="inherit" text-anchor="middle">
+          ${item.label}
+        </text>
+      </g>
+    `;
+  });
+
+  container.innerHTML = `
+    <svg width="${svgWidth}" height="${chartHeight}" class="chart-svg-main" viewBox="0 0 ${svgWidth} ${chartHeight}">
+      <defs>
+        <linearGradient id="chart-bar-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+      </defs>
+      
+      <!-- Linhas de Grid Guia -->
+      <line x1="0" y1="${chartHeight - paddingBottom}" x2="${svgWidth}" y2="${chartHeight - paddingBottom}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+      <line x1="0" y1="${chartHeight - paddingBottom - (usableHeight / 2)}" x2="${svgWidth}" y2="${chartHeight - paddingBottom - (usableHeight / 2)}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
+      <line x1="0" y1="${paddingTop}" x2="${svgWidth}" y2="${paddingTop}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
+
+      ${barsSvg}
+    </svg>
+  `;
+}
+
+// Renderiza Lista de Detalhamento
+function renderBreakdownTable(container, dataPoints, totalClicks) {
+  if (!container) return;
+
+  const nonZeroItems = [...dataPoints].reverse().filter(d => d.clicks > 0);
+  if (nonZeroItems.length === 0) {
+    container.innerHTML = `<div style="padding: 1rem; color: var(--text-muted); text-align: center; font-size: 0.85rem;">Nenhum clique registrado neste período.</div>`;
+    return;
+  }
+
+  let html = "";
+  nonZeroItems.forEach(item => {
+    const pct = totalClicks > 0 ? ((item.clicks / totalClicks) * 100).toFixed(1) : 0;
+    html += `
+      <div class="analytics-breakdown-row">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #38bdf8;"></span>
+          <strong style="color: #fff;">${escapeHtml(item.fullName || item.label)}</strong>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <span style="color: var(--text-muted); font-size: 0.78rem;">${pct}% do total</span>
+          <span class="clicks-badge" style="font-size: 0.82rem;">
+            ${item.clicks} ${item.clicks === 1 ? 'clique' : 'cliques'}
+          </span>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
 window.loadDashboardData = loadDashboardData;
 window.initDashboard = initDashboard;
 window.deleteLink = deleteLink;
@@ -1421,4 +1778,8 @@ window.open2FAManageModal = open2FAManageModal;
 window.close2FAManageModal = close2FAManageModal;
 window.copy2FAManageSecret = copy2FAManageSecret;
 window.disableAdmin2FA = disableAdmin2FA;
+window.openLinkAnalyticsModal = openLinkAnalyticsModal;
+window.closeLinkAnalyticsModal = closeLinkAnalyticsModal;
+window.switchAnalyticsViewMode = switchAnalyticsViewMode;
+
 

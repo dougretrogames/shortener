@@ -522,6 +522,7 @@ const supabaseDb = {
   },
 
   // Incrementa contador de cliques no Supabase em tempo real
+  // Incrementa contador de cliques no Supabase em tempo real com histórico diário
   async incrementClicks(slug) {
     if (!slug) return 0;
     const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
@@ -530,6 +531,14 @@ const supabaseDb = {
       if (!link) return 0;
 
       const newClicks = (Number(link.clicks) || 0) + 1;
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      
+      const enc = (link.encrypted_data && typeof link.encrypted_data === "object") ? link.encrypted_data : {};
+      if (!enc.daily_clicks || typeof enc.daily_clicks !== "object") {
+        enc.daily_clicks = {};
+      }
+      enc.daily_clicks[today] = (Number(enc.daily_clicks[today]) || 0) + 1;
+
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
         method: "PATCH",
@@ -537,11 +546,14 @@ const supabaseDb = {
           ...this.getHeaders(),
           "Prefer": "return=representation"
         },
-        body: JSON.stringify({ clicks: newClicks })
+        body: JSON.stringify({ 
+          clicks: newClicks,
+          encrypted_data: enc
+        })
       });
 
       if (res.ok) {
-        console.log(`[Supabase] Clique atualizado com sucesso para /${cleanSlug}: ${newClicks} cliques`);
+        console.log(`[Supabase] Clique atualizado com sucesso para /${cleanSlug}: ${newClicks} cliques (${today})`);
       }
       return newClicks;
     } catch (e) {
