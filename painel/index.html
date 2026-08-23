@@ -8,24 +8,24 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/png" href="../favicon.png?v=42.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=42.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=42.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=43.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=43.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=43.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=42.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=43.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=42.0"></script>
-  <script type="text/javascript" src="../b64.js?v=42.0"></script>
-  <script type="text/javascript" src="../api.js?v=42.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=42.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=42.0"></script>
-  <script type="text/javascript" src="../auth.js?v=42.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=42.0"></script>
-  <script type="text/javascript" src="../totp.js?v=42.0"></script>
-  <script type="text/javascript" src="painel.js?v=42.0"></script>
+  <script type="text/javascript" src="../config.js?v=43.0"></script>
+  <script type="text/javascript" src="../b64.js?v=43.0"></script>
+  <script type="text/javascript" src="../api.js?v=43.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=43.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=43.0"></script>
+  <script type="text/javascript" src="../auth.js?v=43.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=43.0"></script>
+  <script type="text/javascript" src="../totp.js?v=43.0"></script>
+  <script type="text/javascript" src="painel.js?v=43.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -431,14 +431,26 @@
       </div>
 
       <!-- Passo 2: Validar Código -->
-      <div style="text-align: left; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+      <div style="text-align: left; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem; cursor: pointer;" onclick="document.querySelector('#twofa-setup-pin').focus()">
         <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
           <span class="twofa-step-badge">2</span>
           <strong style="color: #fff; font-size: 0.88rem;">Digite o código de 6 dígitos gerado:</strong>
         </div>
 
         <div style="text-align: center;">
-          <input type="text" id="twofa-setup-pin" class="otp-pin-input" maxlength="6" inputmode="numeric" placeholder="000000" onkeyup="if(event.key==='Enter') confirm2FASetup()" />
+          <input 
+            type="tel" 
+            id="twofa-setup-pin" 
+            class="otp-pin-input" 
+            maxlength="6" 
+            inputmode="numeric" 
+            pattern="[0-9]*" 
+            autocomplete="one-time-code" 
+            placeholder="000000" 
+            onkeyup="if(event.key==='Enter') confirm2FASetup()" 
+            onclick="event.stopPropagation(); this.focus();"
+            ontouchstart="event.stopPropagation(); this.focus();"
+          />
           <div id="twofa-setup-error" style="color: #f87171; font-size: 0.82rem; margin-top: 0.5rem; display: none;"></div>
         </div>
       </div>
@@ -471,8 +483,20 @@
         Abra o aplicativo <strong>Microsoft Authenticator</strong> no seu celular e digite o código de 6 dígitos para desbloquear as funções de administrador:
       </p>
 
-      <div style="margin-bottom: 1.5rem;">
-        <input type="text" id="twofa-challenge-pin" class="otp-pin-input" maxlength="6" inputmode="numeric" placeholder="000000" onkeyup="if(event.key==='Enter') verify2FAChallenge()" />
+      <div style="margin-bottom: 1.5rem; cursor: pointer;" onclick="document.querySelector('#twofa-challenge-pin').focus()">
+        <input 
+          type="tel" 
+          id="twofa-challenge-pin" 
+          class="otp-pin-input" 
+          maxlength="6" 
+          inputmode="numeric" 
+          pattern="[0-9]*" 
+          autocomplete="one-time-code" 
+          placeholder="000000" 
+          onkeyup="if(event.key==='Enter') verify2FAChallenge()"
+          onclick="event.stopPropagation(); this.focus();"
+          ontouchstart="event.stopPropagation(); this.focus();"
+        />
         <div id="twofa-challenge-error" style="color: #f87171; font-size: 0.85rem; margin-top: 0.65rem; display: none;"></div>
       </div>
 

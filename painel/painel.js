@@ -1267,11 +1267,15 @@ function open2FASetupModal() {
   }
 
   const modal = document.querySelector("#modal-2fa-setup");
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    const card = modal.querySelector(".modal-card");
+    if (card) card.scrollTop = 0;
+  }
 
   setTimeout(() => {
     if (pinInput) pinInput.focus();
-  }, 100);
+  }, 250);
 }
 
 function close2FASetupModal() {
@@ -1328,11 +1332,15 @@ function open2FAChallengeModal() {
     errorDiv.innerText = "";
   }
 
-  if (modal) modal.style.display = "flex";
+  if (modal) {
+    modal.style.display = "flex";
+    const card = modal.querySelector(".modal-card");
+    if (card) card.scrollTop = 0;
+  }
 
   setTimeout(() => {
     if (pinInput) pinInput.focus();
-  }, 100);
+  }, 250);
 }
 
 function close2FAChallengeModal() {
