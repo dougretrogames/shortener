@@ -1582,41 +1582,39 @@ footer a:hover {
   font-family: inherit;
   cursor: pointer;
   transition: all var(--transition-fast);
-  border: 1px solid var(--border-color);
+  background: #ffffff !important;
+  color: #181717 !important;
+  border: 1px solid #e5e7eb !important;
   min-height: 48px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-social:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.18);
 }
 
 .btn-social:active {
   transform: translateY(0);
+  background: #f1f5f9 !important;
+}
+
+.btn-github {
+  background: #ffffff !important;
+  color: #181717 !important;
+  border-color: #e5e7eb !important;
+}
+
+.btn-github svg {
+  fill: #181717 !important;
 }
 
 .btn-google {
   background: #ffffff !important;
   color: #1f2937 !important;
   border-color: #e5e7eb !important;
-}
-
-.btn-google:hover {
-  background: #f8fafc !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15) !important;
-}
-
-.btn-github {
-  background: #181c24 !important;
-  color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-}
-
-.btn-github:hover {
-  background: #24292e !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* ==========================================================================
