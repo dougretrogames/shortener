@@ -102,6 +102,10 @@ class AuthManager {
         };
 
         this.saveUser(userData);
+        sessionStorage.removeItem("shortener_admin_2fa_session_verified");
+        if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
+          window.TOTP.setSessionVerified(false);
+        }
         await migrateVisitorLinksToAccount(userData);
         if (!window.location.pathname.includes("/painel")) {
           window.location.href = getRelativePathTo("painel");
@@ -126,6 +130,10 @@ class AuthManager {
     };
 
     this.saveUser(userData);
+    sessionStorage.removeItem("shortener_admin_2fa_session_verified");
+    if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
+      window.TOTP.setSessionVerified(false);
+    }
     await migrateVisitorLinksToAccount(userData);
     if (!window.location.pathname.includes("/painel")) {
       window.location.href = getRelativePathTo("painel");
@@ -139,8 +147,12 @@ class AuthManager {
     try {
       localStorage.removeItem("linklock_saved_custom_links");
       localStorage.removeItem("linklock_history");
+      sessionStorage.removeItem("shortener_admin_2fa_session_verified");
       if (window.clickTracker && typeof window.clickTracker.clearAll === "function") {
         window.clickTracker.clearAll();
+      }
+      if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
+        window.TOTP.setSessionVerified(false);
       }
     } catch (e) {
       console.error("Erro ao limpar cache local no logout:", e);
@@ -432,6 +444,10 @@ async function applyUserSession(data, accessToken, refreshToken) {
   };
 
   window.authManager.saveUser(userData);
+  sessionStorage.removeItem("shortener_admin_2fa_session_verified");
+  if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
+    window.TOTP.setSessionVerified(false);
+  }
   await migrateVisitorLinksToAccount(userData);
 
   // Limpa os parâmetros de autenticação da URL mantendo o endereço limpo

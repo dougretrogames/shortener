@@ -64,6 +64,14 @@ function initDashboard() {
   }
 
   updateSessionInfo();
+
+  // Se o usuário for administrador e o 2FA estiver ativado mas ainda não validado nesta sessão,
+  // exige o código do Microsoft Authenticator IMEDIATAMENTE ao entrar no Painel!
+  if (isAdmin && window.TOTP && window.TOTP.is2FAEnabled() && !window.TOTP.isSessionVerified()) {
+    open2FAChallengeModal();
+    return;
+  }
+
   loadDashboardData();
 }
 
@@ -1377,7 +1385,10 @@ function open2FAChallengeModal() {
 function close2FAChallengeModal() {
   const modal = document.querySelector("#modal-2fa-challenge");
   if (modal) modal.style.display = "none";
-  switchDashboardTab("my-links");
+  if (window.TOTP && window.TOTP.is2FAEnabled() && !window.TOTP.isSessionVerified()) {
+    showToast("Acesso cancelado. O painel requer autenticação em 2 etapas.");
+    handleAuthLogout();
+  }
 }
 
 async function verify2FAChallenge() {
@@ -1419,7 +1430,7 @@ async function verify2FAChallenge() {
       const modal = document.querySelector("#modal-2fa-challenge");
       if (modal) modal.style.display = "none";
       showToast("✓ Identidade de administrador verificada com sucesso!");
-      switchDashboardTab(targetTabAfter2FA || "admin-all");
+      loadDashboardData();
     } else {
       errorDiv.style.display = "block";
       errorDiv.innerText = "Código de 6 dígitos incorreto. Verifique no Microsoft Authenticator e tente novamente.";
