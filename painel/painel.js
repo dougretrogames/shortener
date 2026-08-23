@@ -1218,7 +1218,8 @@ function showToast(text) {
   const toast = document.querySelector("#dashboard-toast");
   const toastText = document.querySelector("#toast-text");
   if (toast && toastText) {
-    toastText.innerText = text;
+    const cleanText = String(text || "").replace(/^[✓✔\s]+/, '').trim();
+    toastText.innerText = cleanText;
     toast.className = "alert-toast visible";
     setTimeout(() => {
       toast.className = "alert-toast";
@@ -1341,7 +1342,7 @@ async function confirm2FASetup() {
       window.TOTP.enable2FA(secretToVerify);
       close2FASetupModal();
       updateSessionInfo();
-      showToast("✓ Verificação em 2 Etapas (2FA) configurada com sucesso!");
+      showToast("Verificação em 2 Etapas (2FA) configurada com sucesso!");
       if (currentTab === "admin-all" || currentTab === "admin-users") {
         switchDashboardTab(currentTab);
       }
@@ -1429,7 +1430,7 @@ async function verify2FAChallenge() {
       window.TOTP.setSessionVerified(true);
       const modal = document.querySelector("#modal-2fa-challenge");
       if (modal) modal.style.display = "none";
-      showToast("✓ Identidade de administrador verificada com sucesso!");
+      showToast("Identidade de administrador verificada com sucesso!");
       loadDashboardData();
     } else {
       errorDiv.style.display = "block";
