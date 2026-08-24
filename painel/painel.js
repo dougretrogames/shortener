@@ -1427,7 +1427,9 @@ async function verify2FAChallenge() {
   try {
     const isValid = await window.TOTP.verifyToken(savedSecret, pin);
     if (isValid) {
-      window.TOTP.setSessionVerified(true);
+      const rememberCheckbox = document.querySelector("#twofa-remember-device");
+      const shouldRemember = rememberCheckbox ? rememberCheckbox.checked : true;
+      window.TOTP.setSessionVerified(true, shouldRemember ? 30 : 0);
       const modal = document.querySelector("#modal-2fa-challenge");
       if (modal) modal.style.display = "none";
       showToast("Identidade de administrador verificada com sucesso!");
@@ -1842,6 +1844,13 @@ window.filterByUser = filterByUser;
 window.toggleSelectLink = toggleSelectLink;
 window.toggleSelectAllLinks = toggleSelectAllLinks;
 window.deselectAllLinks = deselectAllLinks;
+function forget2FATrustedDevice() {
+  if (!window.TOTP) return;
+  window.TOTP.forgetTrustedDevice();
+  close2FAManageModal();
+  showToast("Navegador esquecido. O 2FA será solicitado no próximo login.");
+}
+
 window.deleteSelectedBatchLinks = deleteSelectedBatchLinks;
 window.handle2FABadgeClick = handle2FABadgeClick;
 window.open2FASetupModal = open2FASetupModal;
@@ -1854,6 +1863,7 @@ window.verify2FAChallenge = verify2FAChallenge;
 window.open2FAManageModal = open2FAManageModal;
 window.close2FAManageModal = close2FAManageModal;
 window.copy2FAManageSecret = copy2FAManageSecret;
+window.forget2FATrustedDevice = forget2FATrustedDevice;
 window.disableAdmin2FA = disableAdmin2FA;
 window.openLinkAnalyticsModal = openLinkAnalyticsModal;
 window.closeLinkAnalyticsModal = closeLinkAnalyticsModal;

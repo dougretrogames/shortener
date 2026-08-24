@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shortener - Módulo de Verificação em Duas Etapas (2FA / TOTP)
  * Padrão RFC 6238 compatível com Microsoft Authenticator, Google Authenticator, etc.
  * 100% Client-Side com Web Crypto API nativa.
@@ -112,9 +112,10 @@ const TOTP = (() => {
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(otpAuthUrl)}&format=svg`;
   }
 
-  // Gestão de Armazenamento Local / Sessão
+  // Gestão de Armazenamento Local / Sessão Confiável
   const STORAGE_KEY_SECRET = "shortener_admin_2fa_secret";
   const STORAGE_KEY_ENABLED = "shortener_admin_2fa_enabled";
+  const STORAGE_KEY_REMEMBERED_UNTIL = "shortener_admin_2fa_remembered_until";
   const SESSION_KEY_VERIFIED = "shortener_admin_2fa_session_verified";
 
   function is2FAEnabled() {
@@ -125,30 +126,58 @@ const TOTP = (() => {
     return localStorage.getItem(STORAGE_KEY_SECRET) || "";
   }
 
-  function enable2FA(secret) {
+  function enable2FA(secret, rememberDays = 30) {
     if (!secret) return;
     localStorage.setItem(STORAGE_KEY_SECRET, secret.trim().toUpperCase());
     localStorage.setItem(STORAGE_KEY_ENABLED, "true");
-    setSessionVerified(true);
+    setSessionVerified(true, rememberDays);
   }
 
   function disable2FA() {
     localStorage.removeItem(STORAGE_KEY_SECRET);
     localStorage.removeItem(STORAGE_KEY_ENABLED);
+    localStorage.removeItem(STORAGE_KEY_REMEMBERED_UNTIL);
     sessionStorage.removeItem(SESSION_KEY_VERIFIED);
+  }
+
+  function isDeviceRemembered() {
+    const rememberedUntil = parseInt(localStorage.getItem(STORAGE_KEY_REMEMBERED_UNTIL) || "0", 10);
+    return !isNaN(rememberedUntil) && rememberedUntil > Date.now();
   }
 
   function isSessionVerified() {
     if (!is2FAEnabled()) return true;
-    return sessionStorage.getItem(SESSION_KEY_VERIFIED) === "true";
+
+    // 1. Sessão atual já verificada
+    if (sessionStorage.getItem(SESSION_KEY_VERIFIED) === "true") {
+      return true;
+    }
+
+    // 2. Dispositivo lembrado neste navegador (persistência)
+    if (isDeviceRemembered()) {
+      sessionStorage.setItem(SESSION_KEY_VERIFIED, "true");
+      return true;
+    }
+
+    return false;
   }
 
-  function setSessionVerified(verified = true) {
+  function setSessionVerified(verified = true, rememberDays = 0) {
     if (verified) {
       sessionStorage.setItem(SESSION_KEY_VERIFIED, "true");
+      if (rememberDays > 0) {
+        const expiresAt = Date.now() + (rememberDays * 24 * 60 * 60 * 1000);
+        localStorage.setItem(STORAGE_KEY_REMEMBERED_UNTIL, String(expiresAt));
+      }
     } else {
       sessionStorage.removeItem(SESSION_KEY_VERIFIED);
+      localStorage.removeItem(STORAGE_KEY_REMEMBERED_UNTIL);
     }
+  }
+
+  function forgetTrustedDevice() {
+    localStorage.removeItem(STORAGE_KEY_REMEMBERED_UNTIL);
+    sessionStorage.removeItem(SESSION_KEY_VERIFIED);
   }
 
   return {
@@ -161,8 +190,10 @@ const TOTP = (() => {
     getSavedSecret,
     enable2FA,
     disable2FA,
+    isDeviceRemembered,
     isSessionVerified,
-    setSessionVerified
+    setSessionVerified,
+    forgetTrustedDevice
   };
 })();
 
