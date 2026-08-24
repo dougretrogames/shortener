@@ -8,19 +8,19 @@
   <meta name="description" content="Shortener - Encurtador de links e proteção de URLs com senha usando criptografia AES-256 no navegador." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=62.0" />
-  <link rel="icon" type="image/png" href="../favicon.png?v=62.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=62.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=62.0" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=63.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=63.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=63.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=63.0" />
 
   <title>Shortener - Criar Link Protegido por Senha</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=62.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=63.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=62.0"></script>
-  <script type="text/javascript" src="../b64.js?v=62.0"></script>
-  <script type="text/javascript" src="../api.js?v=62.0"></script>
+  <script type="text/javascript" src="../config.js?v=63.0"></script>
+  <script type="text/javascript" src="../b64.js?v=63.0"></script>
+  <script type="text/javascript" src="../api.js?v=63.0"></script>
   <script type="text/javascript">
     function error(text) {
       const errorEl = document.querySelector(".error");
@@ -84,12 +84,12 @@
       initHistory();
     }
   </script>
-  <script type="text/javascript" src="../profanity-filter.js?v=62.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=62.0"></script>
-  <script type="text/javascript" src="../auth.js?v=62.0"></script>
-  <script type="text/javascript" src="../totp.js?v=62.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=62.0"></script>
-  <script type="text/javascript" src="criar.js?v=62.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=63.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=63.0"></script>
+  <script type="text/javascript" src="../auth.js?v=63.0"></script>
+  <script type="text/javascript" src="../totp.js?v=63.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=63.0"></script>
+  <script type="text/javascript" src="criar.js?v=63.0"></script>
 </head>
 
 <body onload="main()">
@@ -250,8 +250,8 @@
       <div class="split-row">
         <div class="form-group labeled-input password">
           <label for="password">
-            Senha de Proteção (Opcional)
-            <span style="font-weight: normal; color: var(--text-muted); font-size: 0.78rem; margin-left: 0.3rem;">— deixe em branco para link direto</span>
+            <span>Senha de Proteção (Opcional)</span>
+            <span style="font-weight: normal; color: var(--text-muted); font-size: 0.78rem;">— deixe em branco para link direto</span>
           </label>
           <div class="input-wrapper">
             <input type="password" id="password" class="has-toggle" placeholder="Digite uma senha (ou deixe em branco)..." />
@@ -265,7 +265,10 @@
         </div>
 
         <div class="form-group labeled-input confirm-password">
-          <label for="confirm-password">Confirmar Senha (Opcional)</label>
+          <label for="confirm-password">
+            <span>Confirmar Senha (Opcional)</span>
+            <span style="font-weight: normal; color: var(--text-muted); font-size: 0.78rem;">— repita a senha para confirmar</span>
+          </label>
           <div class="input-wrapper">
             <input type="password" id="confirm-password" class="has-toggle" placeholder="Repita a senha se informada..." oninput="this.setCustomValidity('')" />
             <button type="button" class="input-icon-btn" onclick="togglePasswordVisibility('confirm-password', this)" title="Alternar visibilidade da senha" aria-label="Alternar visibilidade da senha">
@@ -404,6 +407,7 @@
 </body>
 
 </html>
+
 
 
 

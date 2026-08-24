@@ -859,6 +859,26 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+  align-items: stretch;
+}
+
+.split-row .form-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 1.15rem;
+}
+
+.split-row .form-group label {
+  min-height: 2.3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-bottom: 0.4rem;
+}
+
+.split-row .form-group .input-wrapper {
+  margin-top: auto;
 }
 
 /* Checkboxes & Toggles */
@@ -1364,6 +1384,10 @@ footer a:hover {
   .split-row {
     grid-template-columns: 1fr;
     gap: 0;
+  }
+
+  .split-row .form-group label {
+    min-height: auto;
   }
 
   .inline-button-container {
