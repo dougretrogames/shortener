@@ -910,6 +910,41 @@ function togglePasswordVisibility(inputId, btn) {
   }
 }
 
+let editSlugDebounceTimer = null;
+
+// Aciona verificação 1 segundo após o usuário parar de digitar a palavra completa
+function handleEditSlugInputDebounced() {
+  const originalSlug = document.querySelector("#edit-original-slug") ? document.querySelector("#edit-original-slug").value.trim() : "";
+  const rawVal = document.querySelector("#edit-slug") ? document.querySelector("#edit-slug").value.trim() : "";
+  const statusEl = document.querySelector("#edit-slug-status");
+  if (!statusEl) return;
+
+  if (editSlugDebounceTimer) {
+    clearTimeout(editSlugDebounceTimer);
+  }
+
+  if (!rawVal || rawVal.toLowerCase() === originalSlug.toLowerCase()) {
+    statusEl.style.display = "none";
+    statusEl.innerHTML = "";
+    return;
+  }
+
+  // Indicador visual suave enquanto o usuário ainda está digitando
+  statusEl.style.display = "flex";
+  statusEl.className = "slug-status";
+  statusEl.style.color = "var(--text-muted)";
+  statusEl.style.border = "1px dashed rgba(56, 189, 248, 0.25)";
+  statusEl.style.background = "rgba(15, 23, 42, 0.4)";
+  statusEl.innerHTML = `
+    <div class="spinner spinner-primary" style="width: 13px; height: 13px; margin-right: 0.45rem;"></div>
+    <span>Aguardando digitação para verificar...</span>
+  `;
+
+  editSlugDebounceTimer = setTimeout(() => {
+    checkEditSlugAvailability();
+  }, 1000);
+}
+
 async function checkEditSlugAvailability() {
   const originalSlug = document.querySelector("#edit-original-slug").value.trim();
   const rawVal = document.querySelector("#edit-slug").value.trim();
@@ -918,6 +953,7 @@ async function checkEditSlugAvailability() {
 
   if (!rawVal || rawVal.toLowerCase() === originalSlug.toLowerCase()) {
     statusEl.style.display = "none";
+    statusEl.innerHTML = "";
     return;
   }
 
@@ -930,6 +966,9 @@ async function checkEditSlugAvailability() {
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
     statusEl.style.display = "flex";
     statusEl.className = "slug-status exists";
+    statusEl.style.color = "";
+    statusEl.style.border = "";
+    statusEl.style.background = "";
     statusEl.innerHTML = `⚠️ O apelido contém termos impróprios ou palavras de baixo calão não permitidas.`;
     return;
   }
@@ -946,6 +985,9 @@ async function checkEditSlugAvailability() {
   }
 
   statusEl.style.display = "flex";
+  statusEl.style.color = "";
+  statusEl.style.border = "";
+  statusEl.style.background = "";
   if (existsLocal || existsRemote) {
     statusEl.className = "slug-status exists";
     statusEl.innerHTML = `⚠️ O apelido "<strong>${escapeHtml(newSlug)}</strong>" já está em uso por outro link cadastrado.`;
@@ -2011,5 +2053,7 @@ window.disableAdmin2FA = disableAdmin2FA;
 window.openLinkAnalyticsModal = openLinkAnalyticsModal;
 window.closeLinkAnalyticsModal = closeLinkAnalyticsModal;
 window.switchAnalyticsViewMode = switchAnalyticsViewMode;
+window.handleEditSlugInputDebounced = handleEditSlugInputDebounced;
+window.checkEditSlugAvailability = checkEditSlugAvailability;
 
 

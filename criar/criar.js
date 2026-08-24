@@ -399,7 +399,42 @@ async function getAllExistingSlugs() {
   return slugSet;
 }
 
-// Verifica disponibilidade de apelido personalizado em tempo real (consulta global + filtro de profanidade)
+let slugCheckDebounceTimer = null;
+
+// Aciona verificação 1 segundo após o usuário parar de digitar a palavra completa
+function handleSlugInputDebounced() {
+  const slugInput = document.querySelector("#custom-slug");
+  const statusEl = document.querySelector("#slug-status");
+  if (!slugInput || !statusEl) return;
+
+  if (slugCheckDebounceTimer) {
+    clearTimeout(slugCheckDebounceTimer);
+  }
+
+  const rawVal = slugInput.value.trim();
+  if (!rawVal) {
+    statusEl.style.display = "none";
+    statusEl.innerHTML = "";
+    return;
+  }
+
+  // Indicador visual suave enquanto o usuário ainda está digitando
+  statusEl.style.display = "flex";
+  statusEl.className = "slug-status";
+  statusEl.style.color = "var(--text-muted)";
+  statusEl.style.border = "1px dashed rgba(56, 189, 248, 0.25)";
+  statusEl.style.background = "rgba(15, 23, 42, 0.4)";
+  statusEl.innerHTML = `
+    <div class="spinner spinner-primary" style="width: 13px; height: 13px; margin-right: 0.45rem;"></div>
+    <span>Aguardando digitação para verificar...</span>
+  `;
+
+  slugCheckDebounceTimer = setTimeout(() => {
+    checkSlugAvailability();
+  }, 1000);
+}
+
+// Verifica disponibilidade de apelido personalizado da palavra completa (consulta global + filtro de profanidade)
 async function checkSlugAvailability() {
   const slugInput = document.querySelector("#custom-slug");
   const statusEl = document.querySelector("#slug-status");
@@ -418,6 +453,9 @@ async function checkSlugAvailability() {
   if (window.profanityFilter && window.profanityFilter.isProfane(cleanSlug)) {
     statusEl.style.display = "flex";
     statusEl.className = "slug-status exists";
+    statusEl.style.color = "";
+    statusEl.style.border = "";
+    statusEl.style.background = "";
     statusEl.innerHTML = `
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
       <span>O apelido <strong>"${escapeHtml(cleanSlug)}"</strong> contém termos impróprios ou palavras de baixo calão não permitidas.</span>
@@ -425,10 +463,39 @@ async function checkSlugAvailability() {
     return;
   }
 
-  const existingSlugs = await getAllExistingSlugs();
-  const isTaken = existingSlugs.has(cleanSlug.toLowerCase());
+  // Slugs reservados do sistema
+  const reserved = new Set(["criar", "painel", "descriptografar", "index.html", "404.html", "shortener", "encurtador", "privacidade", "termos"]);
+  if (reserved.has(cleanSlug.toLowerCase())) {
+    statusEl.style.display = "flex";
+    statusEl.className = "slug-status exists";
+    statusEl.style.color = "";
+    statusEl.style.border = "";
+    statusEl.style.background = "";
+    statusEl.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span>O apelido <strong>"${escapeHtml(cleanSlug)}"</strong> é reservado pelo sistema. Escolha outro nome.</span>
+    `;
+    return;
+  }
+
+  // 2. Consulta de disponibilidade em tempo real
+  let isTaken = false;
+  if (window.supabaseDb) {
+    try {
+      isTaken = await window.supabaseDb.exists(cleanSlug);
+    } catch {
+      const existingSlugs = await getAllExistingSlugs();
+      isTaken = existingSlugs.has(cleanSlug.toLowerCase());
+    }
+  } else {
+    const existingSlugs = await getAllExistingSlugs();
+    isTaken = existingSlugs.has(cleanSlug.toLowerCase());
+  }
 
   statusEl.style.display = "flex";
+  statusEl.style.color = "";
+  statusEl.style.border = "";
+  statusEl.style.background = "";
   if (isTaken) {
     statusEl.className = "slug-status exists";
     statusEl.innerHTML = `
@@ -443,6 +510,9 @@ async function checkSlugAvailability() {
     `;
   }
 }
+
+window.handleSlugInputDebounced = handleSlugInputDebounced;
+window.checkSlugAvailability = checkSlugAvailability;
 
 // Alfabeto seguro para geração de links automáticos de 5 dígitos:
 // - Letras maiúsculas sem 'I' (25 caracteres)
