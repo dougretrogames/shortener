@@ -297,7 +297,7 @@ async function main() {
       }
     };
   } else {
-    // Caso seja acesso direto à raiz (homepage), redireciona no modo topo/home
-    window.location.replace("./criar?home=1");
+    // Caso seja acesso direto à raiz (homepage), redireciona para a página de criação de forma limpa
+    window.location.replace("./criar/");
   }
 }
