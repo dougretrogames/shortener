@@ -833,17 +833,21 @@ textarea {
 
 .slug-status {
   font-size: 0.82rem;
-  margin-top: 0.4rem;
+  margin-top: 0.45rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.4rem;
   transition: all var(--transition-fast);
   line-height: 1.4;
 }
 
+.slug-status span {
+  display: inline;
+  flex: 1;
+}
+
 .slug-status svg {
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .slug-status.available {

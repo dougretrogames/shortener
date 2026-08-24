@@ -351,13 +351,12 @@ function escapeJsString(text) {
   return String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-// Normaliza o apelido (slug) digitado pelo usuário
+// Normaliza o apelido (slug) digitado pelo usuário preservando maiúsculas e minúsculas
 function normalizeSlug(str) {
   if (!str) return "";
   return str.trim()
     .replace(/[\s_]+/g, "-")
-    .replace(/[@#?&/\\:]+/g, "")
-    .toLowerCase();
+    .replace(/[@#?&/\\:]+/g, "");
 }
 
 // Obtém o conjunto de TODOS os links existentes (Supabase Nuvem como autoridade principal)

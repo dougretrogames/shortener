@@ -963,8 +963,7 @@ async function checkEditSlugAvailability() {
 
   const newSlug = rawVal
     .replace(/[\s_]+/g, "-")
-    .replace(/[@#?&/\\:]+/g, "")
-    .toLowerCase();
+    .replace(/[@#?&/\\:]+/g, "");
 
   // 1. Verificação de profanidade
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
@@ -973,12 +972,15 @@ async function checkEditSlugAvailability() {
     statusEl.style.color = "";
     statusEl.style.border = "";
     statusEl.style.background = "";
-    statusEl.innerHTML = `⚠️ O apelido contém termos impróprios ou palavras de baixo calão não permitidas.`;
+    statusEl.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span>O apelido <strong>"${escapeHtml(newSlug)}"</strong> contém termos impróprios ou palavras de baixo calão não permitidas.</span>
+    `;
     return;
   }
 
   // 2. Consulta no cache local de links carregados
-  const existsLocal = allLinks.some(l => l.slug && l.slug.toLowerCase() === newSlug && l.slug.toLowerCase() !== originalSlug.toLowerCase());
+  const existsLocal = allLinks.some(l => l.slug && l.slug.toLowerCase() === newSlug.toLowerCase() && l.slug.toLowerCase() !== originalSlug.toLowerCase());
 
   // 3. Consulta global em tempo real no Supabase
   let existsRemote = false;
@@ -994,10 +996,16 @@ async function checkEditSlugAvailability() {
   statusEl.style.background = "";
   if (existsLocal || existsRemote) {
     statusEl.className = "slug-status exists";
-    statusEl.innerHTML = `⚠️ O apelido "<strong>${escapeHtml(newSlug)}</strong>" já está em uso por outro link cadastrado.`;
+    statusEl.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span>O apelido <strong>"${escapeHtml(newSlug)}"</strong> já está em uso por outro link cadastrado.</span>
+    `;
   } else {
     statusEl.className = "slug-status available";
-    statusEl.innerHTML = `✓ Apelido "<strong>${escapeHtml(newSlug)}</strong>" disponível para uso!`;
+    statusEl.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>Apelido <strong>"${escapeHtml(newSlug)}"</strong> disponível para uso!</span>
+    `;
   }
 }
 
@@ -1014,8 +1022,7 @@ async function saveEditedLink(e) {
 
   const newSlug = rawSlug
     .replace(/[\s_]+/g, "-")
-    .replace(/[@#?&/\\:]+/g, "")
-    .toLowerCase();
+    .replace(/[@#?&/\\:]+/g, "");
 
   if (!newSlug) {
     alert("Por favor, informe um apelido válido para o link.");

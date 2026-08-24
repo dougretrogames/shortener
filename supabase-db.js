@@ -147,9 +147,9 @@ const supabaseDb = {
   // Busca um link pelo slug no Supabase
   async getLink(slug) {
     if (!slug) return null;
-    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
     try {
-      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}&select=*`;
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=ilike.${encodeURIComponent(cleanSlug)}&select=*`;
       const res = await fetch(endpoint, {
         method: "GET",
         headers: this.getHeaders()
@@ -269,7 +269,7 @@ const supabaseDb = {
   // Salva um novo link no Supabase com identificação e vinculação definitiva da conta
   async saveLink({ slug, encryptedData, hint, targetUrl, authorType, authorUsername, authorId, authorName, authorAvatar }) {
     if (!slug || !encryptedData) return false;
-    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
     const cleanAuthorType = authorType || "visitante";
     const cleanAuthorUsername = (authorUsername || (cleanAuthorType === "google" ? "google" : cleanAuthorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
     const cleanAuthorId = authorId || (cleanAuthorType !== "visitante" ? `${cleanAuthorType}_${cleanAuthorUsername}` : null);
@@ -320,7 +320,7 @@ const supabaseDb = {
   // Atualiza os dados de autoria/vinculação de um link (usado para migrar links de visitante para usuário conectado)
   async updateLinkAuthor(slug, { authorType, authorUsername, authorId, authorName, authorAvatar, targetUrl }) {
     if (!slug) return false;
-    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
 
     try {
       const linkRecord = await this.getLink(cleanSlug);
@@ -330,13 +330,14 @@ const supabaseDb = {
         ? linkRecord.encrypted_data
         : {};
 
-      const finalType = authorType || "google";
-      const cleanUser = (authorUsername || finalType).toLowerCase().replace(/^@/, '');
-      const finalId = authorId || `${finalType}_${cleanUser}`;
-      const finalName = `@${cleanUser}`;
+      const finalType = authorType || linkRecord.author_type || "github";
+      const rawUser = authorUsername || enc.author_username || "github";
+      const finalUser = String(rawUser).toLowerCase().replace(/^@/, '');
+      const finalId = authorId || enc.author_id || `${finalType}_${finalUser}`;
+      const finalName = authorName || enc.author_name || `@${finalUser}`;
 
       enc.author_type = finalType;
-      enc.author_username = cleanUser;
+      enc.author_username = finalUser;
       enc.author_id = finalId;
       enc.author_name = finalName;
       if (authorAvatar) enc.author_avatar = authorAvatar;
@@ -345,7 +346,7 @@ const supabaseDb = {
         enc.t = targetUrl;
       }
 
-      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=ilike.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
         method: "PATCH",
         headers: {
@@ -401,26 +402,26 @@ const supabaseDb = {
 
         if (needsSync) {
           await this.updateLinkAuthor(link.slug, {
-            authorType: link.author_type || enc.author_type || provider,
-            authorUsername: enc.author_username || cleanUser,
+            authorType: provider,
+            authorUsername: cleanUser,
             authorId: authorId,
             authorName: authorName,
             authorAvatar: authorAvatar,
-            targetUrl: localTargetUrl || enc.target_url || ""
+            targetUrl: localTargetUrl
           });
         }
       }
     } catch (e) {
-      console.warn("[Supabase] Sincronização automática de author_id:", e);
+      console.warn("[Supabase] Falha ao sincronizar links do usuário:", e);
     }
   },
 
   // Verifica se um slug já existe no Supabase
   async exists(slug) {
     if (!slug) return false;
-    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
     try {
-      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}&select=slug`;
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=ilike.${encodeURIComponent(cleanSlug)}&select=slug`;
       const res = await fetch(endpoint, {
         method: "GET",
         headers: this.getHeaders()
@@ -438,8 +439,8 @@ const supabaseDb = {
   // Atualiza um link existente no Supabase (incluindo eventual alteração de slug ou dados criptografados)
   async updateLink(originalSlug, { newSlug, encryptedData, hint, targetUrl }) {
     if (!originalSlug || !encryptedData) return false;
-    const cleanOrig = String(originalSlug).trim().toLowerCase().replace(/^[/#]+/, '');
-    const cleanNew = String(newSlug || originalSlug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanOrig = String(originalSlug).trim().replace(/^[/#]+/, '');
+    const cleanNew = String(newSlug || originalSlug).trim().replace(/^[/#]+/, '');
 
     try {
       const existing = await this.getLink(cleanOrig);
@@ -463,7 +464,7 @@ const supabaseDb = {
       }
 
       // Se mudou o slug, remove o antigo e insere o novo mantendo contagem de cliques, autoria e data de criação
-      if (cleanNew !== cleanOrig) {
+      if (cleanNew.toLowerCase() !== cleanOrig.toLowerCase()) {
         await this.deleteLink(cleanOrig);
         const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}`;
         const payload = {
@@ -485,8 +486,8 @@ const supabaseDb = {
         });
         return res.ok || res.status === 201;
       } else {
-        // Se o slug é o mesmo, atualiza diretamente via PATCH
-        const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanOrig)}`;
+        // Se o slug é o mesmo (ou apenas mudou a caixa das letras), atualiza
+        const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=ilike.${encodeURIComponent(cleanOrig)}`;
         const res = await fetch(endpoint, {
           method: "PATCH",
           headers: {
@@ -494,6 +495,7 @@ const supabaseDb = {
             "Prefer": "return=representation"
           },
           body: JSON.stringify({
+            slug: cleanNew,
             encrypted_data: encryptedData,
             hint: hint || null
           })
@@ -509,9 +511,9 @@ const supabaseDb = {
   // Exclui um link no Supabase
   async deleteLink(slug) {
     if (!slug) return false;
-    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
     try {
-      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=ilike.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
         method: "DELETE",
         headers: {
@@ -530,7 +532,7 @@ const supabaseDb = {
   // Exclui múltiplos links em lote no Supabase
   async deleteLinksBatch(slugs) {
     if (!Array.isArray(slugs) || slugs.length === 0) return false;
-    const cleanSlugs = slugs.map(s => String(s).trim().toLowerCase().replace(/^[/#]+/, '')).filter(Boolean);
+    const cleanSlugs = slugs.map(s => String(s).trim().replace(/^[/#]+/, '')).filter(Boolean);
     if (cleanSlugs.length === 0) return false;
 
     try {
@@ -552,11 +554,10 @@ const supabaseDb = {
     }
   },
 
-  // Incrementa contador de cliques no Supabase em tempo real
   // Incrementa contador de cliques no Supabase em tempo real com histórico diário
   async incrementClicks(slug) {
     if (!slug) return 0;
-    const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
+    const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
     try {
       const link = await this.getLink(cleanSlug);
       if (!link) return 0;
@@ -570,7 +571,7 @@ const supabaseDb = {
       }
       enc.daily_clicks[today] = (Number(enc.daily_clicks[today]) || 0) + 1;
 
-      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
+      const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=ilike.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
         method: "PATCH",
         headers: {
