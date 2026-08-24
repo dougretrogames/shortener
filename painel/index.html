@@ -8,25 +8,25 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=65.0" />
-  <link rel="icon" type="image/png" href="../favicon.png?v=65.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=65.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=65.0" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=66.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=66.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=66.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=66.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=65.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=66.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=65.0"></script>
-  <script type="text/javascript" src="../b64.js?v=65.0"></script>
-  <script type="text/javascript" src="../api.js?v=65.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=65.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=65.0"></script>
-  <script type="text/javascript" src="../auth.js?v=65.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=65.0"></script>
-  <script type="text/javascript" src="../totp.js?v=65.0"></script>
-  <script type="text/javascript" src="painel.js?v=65.0"></script>
+  <script type="text/javascript" src="../config.js?v=66.0"></script>
+  <script type="text/javascript" src="../b64.js?v=66.0"></script>
+  <script type="text/javascript" src="../api.js?v=66.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=66.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=66.0"></script>
+  <script type="text/javascript" src="../auth.js?v=66.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=66.0"></script>
+  <script type="text/javascript" src="../totp.js?v=66.0"></script>
+  <script type="text/javascript" src="painel.js?v=66.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -120,7 +120,7 @@
     </div>
 
     <!-- Conteúdo Principal do Dashboard (Exibido apenas para usuários autenticados) -->
-    <div id="dashboard-content">
+    <div id="dashboard-content" style="display: none;">
       <!-- Abas Exclusivas do Administrador (@dougretrogames) -->
       <div id="admin-tabs-container" class="admin-tabs-bar" style="display: none;">
         <button type="button" class="admin-tab-btn active" id="tab-my-links" onclick="switchDashboardTab('my-links')">
@@ -686,6 +686,7 @@
 </body>
 
 </html>
+
 
 
 

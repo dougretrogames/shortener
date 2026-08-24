@@ -29,9 +29,20 @@ function isAdminUser(user) {
 }
 
 function initDashboard() {
+  const hash = window.location.hash || "";
+  const search = window.location.search || "";
+  const isHandlingOAuth = hash.includes("access_token=") || search.includes("code=") || hash.includes("code=");
+
   const isAuth = window.authManager && window.authManager.isAuthenticated();
   const restrictedCard = document.querySelector("#access-restricted-card");
   const dashboardContent = document.querySelector("#dashboard-content");
+
+  // Se estiver no meio do processamento do retorno OAuth (login em andamento), não pisca o cartão de acesso restrito
+  if (isHandlingOAuth && !isAuth) {
+    if (restrictedCard) restrictedCard.style.display = "none";
+    if (dashboardContent) dashboardContent.style.display = "none";
+    return;
+  }
 
   if (!isAuth) {
     if (restrictedCard) restrictedCard.style.display = "block";
