@@ -149,12 +149,31 @@ function mapRemoteRecord(remote, user) {
 
   const isPasswordProtected = !!(enc.e && enc.s && enc.i);
 
+  // 1. Obtém a URL de destino real do registro em nuvem
+  let targetUrl = enc.target_url || enc.t || enc.u || remote.target_url || "";
+
+  // 2. Se não estiver no registro remoto, busca no histórico local deste navegador
+  if (!targetUrl || targetUrl.startsWith("Link Protegido")) {
+    try {
+      const localHistory = JSON.parse(localStorage.getItem("linklock_history") || "[]");
+      const localCustom = JSON.parse(localStorage.getItem("linklock_saved_custom_links") || "[]");
+      const found = [...localHistory, ...localCustom].find(item => item && item.slug && item.slug.toLowerCase() === String(remote.slug).toLowerCase());
+      if (found && found.targetUrl && !found.targetUrl.startsWith("Link Protegido")) {
+        targetUrl = found.targetUrl;
+      }
+    } catch (e) {}
+  }
+
+  if (!targetUrl) {
+    targetUrl = isPasswordProtected ? `Link Protegido (/${remote.slug})` : outputUrl;
+  }
+
   return {
     slug: remote.slug,
     outputUrl: outputUrl,
     shortUrl: outputUrl,
     autonomousUrl: `${cleanBaseUrl}#/${encodeURIComponent(remote.slug)}`,
-    targetUrl: enc.t || enc.u || `Link Protegido (/${remote.slug})`,
+    targetUrl: targetUrl,
     hint: remote.hint || enc.h || "",
     encryptedData: enc,
     clicks: remoteClicks,
@@ -787,7 +806,8 @@ function openEditModal(slug) {
 
   document.querySelector("#edit-original-slug").value = link.slug;
   document.querySelector("#edit-slug").value = link.slug;
-  document.querySelector("#edit-target-url").value = link.targetUrl || "";
+  const displayTargetUrl = (link.targetUrl && !link.targetUrl.startsWith("Link Protegido")) ? link.targetUrl : "";
+  document.querySelector("#edit-target-url").value = displayTargetUrl;
   document.querySelector("#edit-hint").value = link.hint || "";
 
   const passwordInput = document.querySelector("#edit-password");
@@ -994,38 +1014,35 @@ async function saveEditedLink(e) {
         v: "0.0.1",
         e: b64.binaryToBase64(new Uint8Array(encryptedBuffer)),
         s: b64.binaryToBase64(salt),
-        i: b64.binaryToBase64(iv)
+        i: b64.binaryToBase64(iv),
+        target_url: newTargetUrl,
+        t: newTargetUrl
       };
       if (newHint) enc.h = newHint;
     } else if (removePassword) {
       enc = {
         v: "0.0.1",
         open: true,
-        u: newTargetUrl
+        u: newTargetUrl,
+        target_url: newTargetUrl,
+        t: newTargetUrl
       };
       if (newHint) enc.h = newHint;
     } else {
       const hadPassword = !!(link.encryptedData && link.encryptedData.e);
       if (hadPassword) {
-        if (link.targetUrl && newTargetUrl !== link.targetUrl) {
-          alert("Para alterar a URL de destino de um link protegido por senha, digite a nova senha (ou redigite a atual) para que a nova URL seja criptografada com segurança.");
-          if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalBtnHtml;
-          }
-          const pwdInput = document.querySelector("#edit-password");
-          if (pwdInput) pwdInput.focus();
-          return;
-        }
-
         enc = typeof link.encryptedData === "object" ? { ...link.encryptedData } : {};
+        enc.target_url = newTargetUrl;
+        enc.t = newTargetUrl;
         if (newHint) enc.h = newHint;
         else delete enc.h;
       } else {
         enc = {
           v: "0.0.1",
           open: true,
-          u: newTargetUrl
+          u: newTargetUrl,
+          target_url: newTargetUrl,
+          t: newTargetUrl
         };
         if (newHint) enc.h = newHint;
       }
@@ -1044,6 +1061,14 @@ async function saveEditedLink(e) {
       });
     }
 
+    // Sincroniza o histórico do armazenamento local (LocalStorage)
+    updateLocalHistoryLink(originalSlug, {
+      slug: newSlug,
+      targetUrl: newTargetUrl,
+      hint: newHint,
+      outputUrl: link.outputUrl
+    });
+
     closeEditModal();
     showToast("Link atualizado no banco de dados com sucesso!");
     await loadDashboardData();
@@ -1054,6 +1079,38 @@ async function saveEditedLink(e) {
       saveBtn.disabled = false;
       saveBtn.innerHTML = originalBtnHtml;
     }
+  }
+}
+
+// Sincroniza e atualiza os links correspondentes dentro do LocalStorage
+function updateLocalHistoryLink(oldSlug, newLinkData) {
+  try {
+    const keys = ["linklock_history", "linklock_saved_custom_links"];
+    keys.forEach(key => {
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      let list = JSON.parse(raw);
+      if (!Array.isArray(list)) return;
+      let changed = false;
+      list = list.map(item => {
+        if (item && item.slug && item.slug.toLowerCase() === oldSlug.toLowerCase()) {
+          changed = true;
+          return {
+            ...item,
+            slug: newLinkData.slug || item.slug,
+            targetUrl: newLinkData.targetUrl || item.targetUrl,
+            hint: newLinkData.hint !== undefined ? newLinkData.hint : item.hint,
+            outputUrl: newLinkData.outputUrl || item.outputUrl
+          };
+        }
+        return item;
+      });
+      if (changed) {
+        localStorage.setItem(key, JSON.stringify(list));
+      }
+    });
+  } catch (e) {
+    console.warn("Erro ao atualizar histórico local:", e);
   }
 }
 

@@ -275,13 +275,17 @@ const supabaseDb = {
     const cleanAuthorId = authorId || (cleanAuthorType !== "visitante" ? `${cleanAuthorType}_${cleanAuthorUsername}` : null);
     const cleanAuthorName = (cleanAuthorType !== "visitante") ? `@${cleanAuthorUsername}` : "Visitante";
     
-    // Injeta os dados definitivos da conta criadora dentro de encrypted_data (JSONB)
+    // Injeta os dados definitivos da conta criadora e URL de destino dentro de encrypted_data (JSONB)
     if (typeof encryptedData === "object" && encryptedData !== null) {
       encryptedData.author_type = cleanAuthorType;
       encryptedData.author_username = cleanAuthorUsername;
       encryptedData.author_id = cleanAuthorId;
       encryptedData.author_name = cleanAuthorName;
       if (authorAvatar) encryptedData.author_avatar = authorAvatar;
+      if (targetUrl) {
+        encryptedData.target_url = targetUrl;
+        encryptedData.t = targetUrl;
+      }
     }
 
     try {
@@ -314,7 +318,7 @@ const supabaseDb = {
   },
 
   // Atualiza os dados de autoria/vinculação de um link (usado para migrar links de visitante para usuário conectado)
-  async updateLinkAuthor(slug, { authorType, authorUsername, authorId, authorName, authorAvatar }) {
+  async updateLinkAuthor(slug, { authorType, authorUsername, authorId, authorName, authorAvatar, targetUrl }) {
     if (!slug) return false;
     const cleanSlug = String(slug).trim().toLowerCase().replace(/^[/#]+/, '');
 
@@ -336,6 +340,10 @@ const supabaseDb = {
       enc.author_id = finalId;
       enc.author_name = finalName;
       if (authorAvatar) enc.author_avatar = authorAvatar;
+      if (targetUrl && !enc.target_url) {
+        enc.target_url = targetUrl;
+        enc.t = targetUrl;
+      }
 
       const endpoint = `${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.table}?slug=eq.${encodeURIComponent(cleanSlug)}`;
       const res = await fetch(endpoint, {
@@ -360,7 +368,7 @@ const supabaseDb = {
     }
   },
 
-  // Sincroniza e preenche automaticamente a coluna author_id e author_name em links existentes
+  // Sincroniza e preenche automaticamente a coluna author_id, author_name e target_url em links existentes
   async syncUserLinksAuthorId(user) {
     if (!user || !user.username) return;
     const cleanUser = String(user.username).toLowerCase().replace(/^@/, '');
@@ -370,12 +378,26 @@ const supabaseDb = {
     const authorAvatar = user.avatar || "";
 
     try {
+      let localLinks = [];
+      try {
+        const h1 = JSON.parse(localStorage.getItem("linklock_history") || "[]");
+        const h2 = JSON.parse(localStorage.getItem("linklock_saved_custom_links") || "[]");
+        localLinks = [...h1, ...h2];
+      } catch (e) {}
+
       const userLinks = await this.getUserLinks(user);
       if (!Array.isArray(userLinks) || userLinks.length === 0) return;
 
       for (const link of userLinks) {
         const enc = (link.encrypted_data && typeof link.encrypted_data === "object") ? link.encrypted_data : {};
-        const needsSync = !link.author_id || !enc.author_id || (link.author_name && !link.author_name.startsWith("@")) || (enc.author_name && !enc.author_name.startsWith("@"));
+        
+        let localTargetUrl = "";
+        const localFound = localLinks.find(item => item && item.slug && item.slug.toLowerCase() === String(link.slug).toLowerCase());
+        if (localFound && localFound.targetUrl && !localFound.targetUrl.startsWith("Link Protegido")) {
+          localTargetUrl = localFound.targetUrl;
+        }
+
+        const needsSync = !link.author_id || !enc.author_id || (link.author_name && !link.author_name.startsWith("@")) || (enc.author_name && !enc.author_name.startsWith("@")) || (!enc.target_url && !!localTargetUrl);
 
         if (needsSync) {
           await this.updateLinkAuthor(link.slug, {
@@ -383,7 +405,8 @@ const supabaseDb = {
             authorUsername: enc.author_username || cleanUser,
             authorId: authorId,
             authorName: authorName,
-            authorAvatar: authorAvatar
+            authorAvatar: authorAvatar,
+            targetUrl: localTargetUrl || enc.target_url || ""
           });
         }
       }
@@ -422,13 +445,21 @@ const supabaseDb = {
       const existing = await this.getLink(cleanOrig);
       if (!existing) return false;
 
-      // Preserva informações do autor existente caso não venham em encryptedData
+      // Preserva informações do autor existente e target_url caso não venham em encryptedData
       if (typeof encryptedData === "object" && encryptedData !== null) {
         if (!encryptedData.author_type && existing.author_type) encryptedData.author_type = existing.author_type;
         if (!encryptedData.author_username && existing.encrypted_data && existing.encrypted_data.author_username) {
           encryptedData.author_username = existing.encrypted_data.author_username;
         }
         if (!encryptedData.author_name && existing.author_name) encryptedData.author_name = existing.author_name;
+        if (!encryptedData.author_id && existing.author_id) encryptedData.author_id = existing.author_id;
+        if (targetUrl) {
+          encryptedData.target_url = targetUrl;
+          encryptedData.t = targetUrl;
+        } else if (existing.encrypted_data && existing.encrypted_data.target_url) {
+          encryptedData.target_url = existing.encrypted_data.target_url;
+          encryptedData.t = existing.encrypted_data.target_url;
+        }
       }
 
       // Se mudou o slug, remove o antigo e insere o novo mantendo contagem de cliques, autoria e data de criação
