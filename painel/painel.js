@@ -555,6 +555,28 @@ function renderLinksTable() {
           </span>
         </td>
         <td>
+          <div class="clicks-cell-wrapper" onclick="openLinkAnalyticsModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Clique para ver gráficos detalhados (diário e mensal de cada mês)">
+            <span class="clicks-badge" title="${clicks} cliques contabilizados">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              ${clicks}
+            </span>
+            <div class="sparkline-container" title="Tendência dos últimos 7 dias">
+              ${sparklineSvg}
+            </div>
+          </div>
+        </td>
+        <td>
+          ${link.isPasswordProtected ? `
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75rem; padding: 0.2rem 0.45rem;">
+              🔒 Protegido
+            </span>
+          ` : `
+            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.75rem; padding: 0.2rem 0.45rem;">
+              🌐 Aberto
+            </span>
+          `}
+        </td>
+        <td>
           ${isGoogle ? `
             <button type="button" onclick="filterByUser('${escapeHtml(cleanUser)}')" class="badge" style="background: rgba(66, 133, 244, 0.12); color: #93c5fd; border: 1px solid rgba(66, 133, 244, 0.3); font-size: 0.75rem; padding: 0.25rem 0.55rem; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 600; cursor: pointer;" title="Filtrar links deste usuário Google">
               ${getGoogleIconSvg()}
@@ -571,28 +593,6 @@ function renderLinksTable() {
               Visitante
             </span>
           `}
-        </td>
-        <td>
-          ${link.isPasswordProtected ? `
-            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.75rem; padding: 0.2rem 0.45rem;">
-              🔒 Protegido
-            </span>
-          ` : `
-            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.75rem; padding: 0.2rem 0.45rem;">
-              🌐 Aberto
-            </span>
-          `}
-        </td>
-        <td>
-          <div class="clicks-cell-wrapper" onclick="openLinkAnalyticsModal(decodeURIComponent('${encodeURIComponent(slug)}'))" title="Clique para ver gráficos detalhados (diário e mensal de cada mês)">
-            <span class="clicks-badge" title="${clicks} cliques contabilizados">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-              ${clicks}
-            </span>
-            <div class="sparkline-container" title="Tendência dos últimos 7 dias">
-              ${sparklineSvg}
-            </div>
-          </div>
         </td>
         <td style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">
           ${dateFormatted}
