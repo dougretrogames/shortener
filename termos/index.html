@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#030712" />
+  <meta name="description" content="Termos de Serviço do Shortener - Diretrizes de uso, regras de segurança e condições de serviço da plataforma." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=50.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=50.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=50.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=50.0" />
+
+  <title>Shortener - Termos de Serviço</title>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="../style.css?v=50.0" type="text/css" />
+
+  <script type="text/javascript" src="../config.js?v=50.0"></script>
+  <script type="text/javascript" src="../b64.js?v=50.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=50.0"></script>
+  <script type="text/javascript" src="../auth.js?v=50.0"></script>
+  <script type="text/javascript" src="../totp.js?v=50.0"></script>
+</head>
+
+<body onload="renderAuthHeader()">
+  <!-- Cabeçalho & Navegação -->
+  <header class="site-header">
+    <div class="header-container">
+      <a href="../criar/" class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>Shortener</span>
+      </a>
+
+      <div id="auth-header-slot" class="auth-slot"></div>
+
+      <button type="button" class="mobile-menu-toggle" onclick="toggleMobileMenu(event)" aria-label="Abrir menu" aria-expanded="false">
+        <svg class="hamburger-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+        <svg class="hamburger-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <nav>
+        <ul class="nav-links">
+          <li><a href="../criar/" class="nav-link">Criar Link</a></li>
+          <li><a href="../descriptografar/" class="nav-link">Descriptografar</a></li>
+          <li><a href="../painel/" class="nav-link">Painel</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="legal-page-container">
+    <div class="legal-header">
+      <div class="legal-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Regras & Condições de Uso
+      </div>
+      <h1 class="legal-title">Termos de Serviço</h1>
+      <p class="legal-subtitle">
+        Diretrizes claras sobre o uso correto, segurança e responsabilidades na utilização do Shortener.
+      </p>
+    </div>
+
+    <div class="legal-card">
+      <!-- Seção 1 -->
+      <section class="legal-section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          1. Aceitação dos Termos
+        </h2>
+        <p>
+          Ao acessar, utilizar ou criar links através do <strong>Shortener</strong>, você concorda expressamente com estes Termos de Serviço e com a nossa <a href="../privacidade/" style="color: var(--accent-primary); text-decoration: underline;">Política de Privacidade</a>. Caso não concorde com qualquer disposição aqui estabelecida, solicitamos que não utilize a plataforma.
+        </p>
+      </section>
+
+      <!-- Seção 2 -->
+      <section class="legal-section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          2. Descrição do Serviço
+        </h2>
+        <p>
+          O Shortener é uma ferramenta de encurtamento de URLs, proteção de links por senha criptografada e análise estatística de cliques. O serviço opera de forma híbrida: permitindo criação autônoma e descentralizada, bem como sincronização em nuvem para usuários conectados.
+        </p>
+      </section>
+
+      <!-- Seção 3 -->
+      <section class="legal-section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          3. Política de Uso Aceitável (Condutas Proibidas)
+        </h2>
+        <p>
+          A integridade e segurança dos usuários são prioridades absolutas. É estritamente proibido criar links que redirecionem ou promovam:
+        </p>
+        <ul class="legal-list">
+          <li><strong>Golpes e Fraudes (Phishing):</strong> Páginas que simulem instituições financeiras, serviços online ou que tentem capturar credenciais de forma fraudulenta.</li>
+          <li><strong>Códigos Maliciosos:</strong> Vírus, malwares, spywares, ransowares, trojans ou qualquer arquivo que comprometa dispositivos.</li>
+          <li><strong>Spam e Disparos Abusivos:</strong> Distribuição em massa não autorizada de links.</li>
+          <li><strong>Conteúdo Ilegal:</strong> Materiais protegidos por direitos autorais sem permissão, exploração infantil, apologia ao crime ou qualquer atividade ilícita perante a legislação vigente.</li>
+        </ul>
+        <div class="legal-highlight-box">
+          <p>
+            <strong>Tolerância Zero para Abusos:</strong> Links identificados ou denunciados como maliciosos serão <strong>excluídos permanentemente e sem aviso prévio</strong> pelo administrador da plataforma.
+          </p>
+        </div>
+      </section>
+
+      <!-- Seção 4 -->
+      <section class="legal-section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+          4. Responsabilidade do Usuário
+        </h2>
+        <p>
+          O usuário é o único e exclusivo responsável pelo destino original dos links que cria e pelo compartilhamento correto das senhas de proteção. O Shortener não avalia previamente o conteúdo de links externos e atua unicamente como intermediador técnico de redirecionamento.
+        </p>
+      </section>
+
+      <!-- Seção 5 -->
+      <section class="legal-section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          5. Isenção de Garantias
+        </h2>
+        <p>
+          O serviço é fornecido "como está" (*as is*), sem garantias de disponibilidade ininterrupta. Embora nos esforcemos para manter 99.9% de tempo de atividade com infraestrutura de ponta, não nos responsabilizamos por perdas de dados decorrentes de esquecimento de senhas ou falhas de terceiros.
+        </p>
+      </section>
+
+      <!-- Seção 6 -->
+      <section class="legal-section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          6. Canal de Denúncias e Suporte
+        </h2>
+        <p>
+          Se você encontrou um link suspeito, impróprio ou malicioso que utiliza este serviço, denuncie imediatamente para que possamos efetuar a remoção:
+        </p>
+        <p style="color: var(--accent-primary); font-weight: 600;">
+          douglasfukuoka@gmail.com
+        </p>
+      </section>
+
+      <p class="legal-updated">
+        Última atualização: 24 de Agosto de 2026.
+      </p>
+    </div>
+  </main>
+
+  <!-- Rodapé -->
+  <footer>
+    <p>
+      Shortener &bull; Criado por <a href="https://github.com/dougretrogames" target="_blank" rel="noopener noreferrer"><strong>Doug Retro Games</strong></a> &bull; 
+      <a href="../privacidade/">Privacidade</a> &bull; 
+      <a href="../termos/">Termos de Uso</a> &bull; 
+      <a href="https://github.com/dougretrogames/shortener" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </p>
+  </footer>
+</body>
+
+</html>
+
