@@ -8,25 +8,25 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=55.0" />
-  <link rel="icon" type="image/png" href="../favicon.png?v=55.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=55.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=55.0" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=56.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=56.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=56.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=56.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=55.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=56.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=55.0"></script>
-  <script type="text/javascript" src="../b64.js?v=55.0"></script>
-  <script type="text/javascript" src="../api.js?v=55.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=55.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=55.0"></script>
-  <script type="text/javascript" src="../auth.js?v=55.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=55.0"></script>
-  <script type="text/javascript" src="../totp.js?v=55.0"></script>
-  <script type="text/javascript" src="painel.js?v=55.0"></script>
+  <script type="text/javascript" src="../config.js?v=56.0"></script>
+  <script type="text/javascript" src="../b64.js?v=56.0"></script>
+  <script type="text/javascript" src="../api.js?v=56.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=56.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=56.0"></script>
+  <script type="text/javascript" src="../auth.js?v=56.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=56.0"></script>
+  <script type="text/javascript" src="../totp.js?v=56.0"></script>
+  <script type="text/javascript" src="painel.js?v=56.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -57,7 +57,7 @@
 
       <nav>
         <ul class="nav-links">
-          <li><a href="../criar/" class="nav-link">Criar Link</a></li>
+          <li><a href="../criar/?focus=1" class="nav-link">Criar Link</a></li>
           <li class="nav-painel-item">
             <a href="../painel/" class="nav-link active nav-link-locked" title="Painel (Acesso Restrito - Requer Login)">
               <span class="nav-link-label">Painel</span>
@@ -275,7 +275,7 @@
       <div id="no-links-msg" style="display: none; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.5rem; opacity: 0.5;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
         <p style="font-size: 0.95rem; margin-bottom: 0.75rem;" id="no-links-text">Nenhum link encontrado no seu painel.</p>
-        <a href="../criar" class="btn btn-primary btn-sm">Criar Primeiro Link</a>
+        <a href="../criar/?focus=1" class="btn btn-primary btn-sm">Criar Primeiro Link</a>
       </div>
     </div>
 
@@ -680,6 +680,7 @@
 </body>
 
 </html>
+
 
 
 
