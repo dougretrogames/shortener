@@ -364,6 +364,7 @@ body {
     gap: 0.4rem !important;
     min-width: 0 !important;
     white-space: nowrap !important;
+    z-index: 2 !important;
   }
 
   .brand-icon {
@@ -377,15 +378,18 @@ body {
     font-weight: 700 !important;
   }
 
-  /* Botão de Autenticação / Perfil do Usuário e Menu alinhados na mesma linha à direita */
+  /* Botão de Autenticação / Perfil do Usuário rigorosamente centralizado no meio da página no mobile */
   .auth-slot {
-    margin-left: auto !important;
-    margin-right: 0.15rem !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
     display: inline-flex !important;
     align-items: center !important;
-    flex-shrink: 0 !important;
-    position: static !important;
-    transform: none !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    z-index: 1 !important;
+    pointer-events: auto !important;
   }
 
   .auth-btn-text-desktop {
@@ -400,9 +404,9 @@ body {
     display: inline-flex !important;
     align-items: center !important;
     padding: 0.3rem 0.65rem !important;
-    font-size: 0.82rem !important;
-    min-height: 34px !important;
-    height: 34px !important;
+    font-size: 0.8rem !important;
+    min-height: 32px !important;
+    height: 32px !important;
     gap: 0.35rem !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
@@ -420,24 +424,24 @@ body {
   .user-avatar-btn {
     display: inline-flex !important;
     align-items: center !important;
-    padding: 0.15rem 0.45rem 0.15rem 0.25rem !important;
-    font-size: 0.78rem !important;
-    min-height: 34px !important;
-    height: 34px !important;
-    gap: 0.3rem !important;
-    max-width: 120px !important;
+    padding: 0.15rem 0.4rem 0.15rem 0.2rem !important;
+    font-size: 0.75rem !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    gap: 0.25rem !important;
+    max-width: 110px !important;
     flex-shrink: 1 !important;
   }
 
   .user-avatar-img {
-    width: 22px !important;
-    height: 22px !important;
+    width: 20px !important;
+    height: 20px !important;
     flex-shrink: 0 !important;
   }
 
   .user-name-label {
-    max-width: 75px !important;
-    font-size: 0.78rem !important;
+    max-width: 65px !important;
+    font-size: 0.75rem !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
@@ -447,21 +451,22 @@ body {
   .user-logout-btn {
     display: inline-flex !important;
     align-items: center !important;
-    padding: 0.25rem 0.45rem !important;
-    font-size: 0.76rem !important;
-    min-height: 34px !important;
-    height: 34px !important;
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.75rem !important;
+    min-height: 32px !important;
+    height: 32px !important;
     gap: 0.2rem !important;
     flex-shrink: 0 !important;
     white-space: nowrap !important;
   }
 
   .user-logout-btn svg {
-    width: 13px !important;
-    height: 13px !important;
+    width: 12px !important;
+    height: 12px !important;
   }
 
   .mobile-menu-toggle {
+    margin-left: auto !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -471,7 +476,7 @@ body {
     min-height: 34px !important;
     padding: 0 !important;
     flex-shrink: 0 !important;
-    margin-left: 0.2rem !important;
+    z-index: 2 !important;
   }
 
   .mobile-menu-toggle svg {
