@@ -141,7 +141,9 @@ const TOTP = (() => {
   }
 
   function isDeviceRemembered() {
-    const rememberedUntil = parseInt(localStorage.getItem(STORAGE_KEY_REMEMBERED_UNTIL) || "0", 10);
+    const raw = localStorage.getItem(STORAGE_KEY_REMEMBERED_UNTIL);
+    if (!raw) return false;
+    const rememberedUntil = parseInt(raw, 10);
     return !isNaN(rememberedUntil) && rememberedUntil > Date.now();
   }
 
@@ -153,7 +155,7 @@ const TOTP = (() => {
       return true;
     }
 
-    // 2. Dispositivo lembrado neste navegador (persistência)
+    // 2. Dispositivo lembrado neste navegador por 30 dias (persistência no localStorage)
     if (isDeviceRemembered()) {
       sessionStorage.setItem(SESSION_KEY_VERIFIED, "true");
       return true;
@@ -171,7 +173,7 @@ const TOTP = (() => {
       }
     } else {
       sessionStorage.removeItem(SESSION_KEY_VERIFIED);
-      localStorage.removeItem(STORAGE_KEY_REMEMBERED_UNTIL);
+      // Não limpa o token de 30 dias do localStorage aqui para preservar o dispositivo lembrado
     }
   }
 

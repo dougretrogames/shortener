@@ -102,9 +102,10 @@ class AuthManager {
         };
 
         this.saveUser(userData);
-        sessionStorage.removeItem("shortener_admin_2fa_session_verified");
-        if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
-          window.TOTP.setSessionVerified(false);
+        if (window.TOTP && typeof window.TOTP.isDeviceRemembered === "function" && window.TOTP.isDeviceRemembered()) {
+          sessionStorage.setItem("shortener_admin_2fa_session_verified", "true");
+        } else {
+          sessionStorage.removeItem("shortener_admin_2fa_session_verified");
         }
         await migrateVisitorLinksToAccount(userData);
         if (!window.location.pathname.includes("/painel")) {
@@ -130,9 +131,10 @@ class AuthManager {
     };
 
     this.saveUser(userData);
-    sessionStorage.removeItem("shortener_admin_2fa_session_verified");
-    if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
-      window.TOTP.setSessionVerified(false);
+    if (window.TOTP && typeof window.TOTP.isDeviceRemembered === "function" && window.TOTP.isDeviceRemembered()) {
+      sessionStorage.setItem("shortener_admin_2fa_session_verified", "true");
+    } else {
+      sessionStorage.removeItem("shortener_admin_2fa_session_verified");
     }
     await migrateVisitorLinksToAccount(userData);
     if (!window.location.pathname.includes("/painel")) {
@@ -444,9 +446,10 @@ async function applyUserSession(data, accessToken, refreshToken) {
   };
 
   window.authManager.saveUser(userData);
-  sessionStorage.removeItem("shortener_admin_2fa_session_verified");
-  if (window.TOTP && typeof window.TOTP.setSessionVerified === "function") {
-    window.TOTP.setSessionVerified(false);
+  if (window.TOTP && typeof window.TOTP.isDeviceRemembered === "function" && window.TOTP.isDeviceRemembered()) {
+    sessionStorage.setItem("shortener_admin_2fa_session_verified", "true");
+  } else {
+    sessionStorage.removeItem("shortener_admin_2fa_session_verified");
   }
   await migrateVisitorLinksToAccount(userData);
 
