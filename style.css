@@ -305,6 +305,32 @@ body {
   }
 }
 
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+.spinner-primary {
+  border: 2px solid rgba(56, 189, 248, 0.2);
+  border-top-color: var(--accent-primary);
+}
+
 /* Desktop default labels */
 .auth-btn-text-mobile {
   display: none;
