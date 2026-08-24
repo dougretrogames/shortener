@@ -929,16 +929,9 @@ function handleEditSlugInputDebounced() {
     return;
   }
 
-  // Indicador visual suave enquanto o usuário ainda está digitando
-  statusEl.style.display = "flex";
-  statusEl.className = "slug-status";
-  statusEl.style.color = "var(--text-muted)";
-  statusEl.style.border = "1px dashed rgba(56, 189, 248, 0.25)";
-  statusEl.style.background = "rgba(15, 23, 42, 0.4)";
-  statusEl.innerHTML = `
-    <div class="spinner spinner-primary" style="width: 13px; height: 13px; margin-right: 0.45rem;"></div>
-    <span>Aguardando digitação para verificar...</span>
-  `;
+  // Mantém oculto enquanto o usuário digita
+  statusEl.style.display = "none";
+  statusEl.innerHTML = "";
 
   editSlugDebounceTimer = setTimeout(() => {
     checkEditSlugAvailability();
