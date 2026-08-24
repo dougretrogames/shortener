@@ -552,7 +552,7 @@ function renderLinksTable() {
     const dateFormatted = link.createdAt ? new Date(link.createdAt).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Recente";
     const isChecked = selectedSlugs.has(slug);
     const canEdit = isLinkOwner(link, user);
-    const sparklineSvg = generateSparklineSvg(link.dailyClicks, clicks, 7);
+    const sparklineSvg = generateSparklineSvg(link.dailyClicks, clicks, 7, link);
 
     html += `
       <tr style="${isChecked ? 'background: rgba(56, 189, 248, 0.08);' : ''}">
@@ -1546,42 +1546,60 @@ function disableAdmin2FA() {
 // Sparklines & Analytics do Link (Gráficos Diário e Mensal)
 // =======================================================
 let currentAnalyticsLink = null;
-let currentAnalyticsMode = "monthly"; // "monthly" | "daily"
+let currentAnalyticsMode = "daily-7"; // "daily-7" | "daily-14" | "daily-30" | "monthly"
 
-// Gera mini gráfico Sparkline SVG com os últimos 7 dias
-function generateSparklineSvg(dailyClicks, totalClicks, daysCount = 7) {
+// Reconcilia cliques diários com os cliques totais (atribui histórico anterior ao dia de criação)
+function getReconciledDailyClicks(link) {
+  if (!link) return {};
+  const totalClicks = Number(link.clicks) || 0;
+  const rawDaily = (link.dailyClicks && typeof link.dailyClicks === "object") ? link.dailyClicks : {};
+  const daily = { ...rawDaily };
+  
+  let sumRecorded = Object.values(daily).reduce((a, b) => a + (Number(b) || 0), 0);
+  if (totalClicks > sumRecorded) {
+    const diff = totalClicks - sumRecorded;
+    const createdKey = link.createdAt ? link.createdAt.slice(0, 10) : "";
+    if (createdKey) {
+      daily[createdKey] = (Number(daily[createdKey]) || 0) + diff;
+    } else {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      daily[todayKey] = (Number(daily[todayKey]) || 0) + diff;
+    }
+  }
+  return daily;
+}
+
+// Gera mini gráfico Sparkline SVG com os últimos 7 dias (baseado nos cliques diários reais)
+function generateSparklineSvg(dailyClicks, totalClicks, daysCount = 7, link = null) {
   const days = [];
   const now = new Date();
   
+  const effectiveDaily = link ? getReconciledDailyClicks(link) : { ...(dailyClicks || {}) };
+  let sumRecorded = Object.values(effectiveDaily).reduce((a, b) => a + (Number(b) || 0), 0);
+  if (totalClicks > sumRecorded) {
+    const createdKey = (link && link.createdAt) ? link.createdAt.slice(0, 10) : now.toISOString().slice(0, 10);
+    effectiveDaily[createdKey] = (Number(effectiveDaily[createdKey]) || 0) + (totalClicks - sumRecorded);
+  }
+
   for (let i = daysCount - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const dateKey = d.toISOString().slice(0, 10);
     const formatted = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-    const count = (dailyClicks && typeof dailyClicks === "object" && dailyClicks[dateKey]) 
-      ? Number(dailyClicks[dateKey]) 
-      : 0;
+    const count = Number(effectiveDaily[dateKey]) || 0;
     days.push({ dateKey, formatted, count });
   }
 
-  // Se não houver histórico diário detalhado mas houver cliques totais, atribui ao período recente para renderização bonita
-  let sum = days.reduce((acc, curr) => acc + curr.count, 0);
-  if (totalClicks > 0 && sum === 0) {
-    days[days.length - 1].count = totalClicks;
-    sum = totalClicks;
-  }
-
-  let maxVal = Math.max(...days.map(d => d.count), 1);
-
-  const barWidth = 5;
+  const maxVal = Math.max(...days.map(d => d.count), 1);
+  const barWidth = 6;
   const barGap = 3;
-  const svgHeight = 20;
+  const svgHeight = 22;
   const svgWidth = daysCount * (barWidth + barGap);
 
   let barsHtml = "";
   days.forEach((d, idx) => {
     const x = idx * (barWidth + barGap);
-    const barHeight = d.count > 0 ? Math.max(3, Math.round((d.count / maxVal) * (svgHeight - 4))) : 2;
+    const barHeight = d.count > 0 ? Math.max(4, Math.round((d.count / maxVal) * (svgHeight - 4))) : 2;
     const y = svgHeight - barHeight;
     const fill = d.count > 0 ? "url(#sparkline-grad)" : "rgba(148, 163, 184, 0.25)";
     const tooltip = `${d.formatted}: ${d.count} ${d.count === 1 ? 'clique' : 'cliques'}`;
@@ -1613,6 +1631,7 @@ function openLinkAnalyticsModal(slug) {
   
   if (!link) return;
   currentAnalyticsLink = link;
+  currentAnalyticsMode = "daily-7"; // Sempre inicia no gráfico diário de 7 dias
 
   const slugTitle = document.querySelector("#analytics-slug-title");
   const targetUrlEl = document.querySelector("#analytics-target-url");
@@ -1637,6 +1656,19 @@ function openLinkAnalyticsModal(slug) {
     typeBadge.innerText = link.authorType === "google" ? "🔴 Google" : link.authorType === "github" ? "🐙 GitHub" : "👤 Visitante";
   }
 
+  // Atualiza botões
+  const btnDaily7 = document.querySelector("#btn-toggle-daily-7");
+  const btnDaily14 = document.querySelector("#btn-toggle-daily-14");
+  const btnDaily30 = document.querySelector("#btn-toggle-daily-30");
+  const btnMonthly = document.querySelector("#btn-toggle-monthly");
+  const heading = document.querySelector("#analytics-chart-heading");
+
+  if (btnDaily7) btnDaily7.className = "analytics-toggle-btn active";
+  if (btnDaily14) btnDaily14.className = "analytics-toggle-btn";
+  if (btnDaily30) btnDaily30.className = "analytics-toggle-btn";
+  if (btnMonthly) btnMonthly.className = "analytics-toggle-btn";
+  if (heading) heading.innerText = "Gráfico Diário (Últimos 7 Dias)";
+
   renderAnalyticsModalContent();
 
   const modal = document.querySelector("#modal-link-analytics");
@@ -1650,14 +1682,22 @@ function closeLinkAnalyticsModal() {
 
 function switchAnalyticsViewMode(mode) {
   currentAnalyticsMode = mode;
+  const btnDaily7 = document.querySelector("#btn-toggle-daily-7");
+  const btnDaily14 = document.querySelector("#btn-toggle-daily-14");
+  const btnDaily30 = document.querySelector("#btn-toggle-daily-30");
   const btnMonthly = document.querySelector("#btn-toggle-monthly");
-  const btnDaily = document.querySelector("#btn-toggle-daily");
   const heading = document.querySelector("#analytics-chart-heading");
 
+  if (btnDaily7) btnDaily7.className = mode === "daily-7" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
+  if (btnDaily14) btnDaily14.className = mode === "daily-14" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
+  if (btnDaily30) btnDaily30.className = mode === "daily-30" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
   if (btnMonthly) btnMonthly.className = mode === "monthly" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
-  if (btnDaily) btnDaily.className = mode === "daily" ? "analytics-toggle-btn active" : "analytics-toggle-btn";
+
   if (heading) {
-    heading.innerText = mode === "monthly" ? "Gráfico Mensal (Desde a Criação)" : "Gráfico Diário (Últimos 30 Dias)";
+    if (mode === "daily-7") heading.innerText = "Gráfico Diário (Últimos 7 Dias)";
+    else if (mode === "daily-14") heading.innerText = "Gráfico Diário (Últimos 14 Dias)";
+    else if (mode === "daily-30") heading.innerText = "Gráfico Diário (Últimos 30 Dias)";
+    else if (mode === "monthly") heading.innerText = "Gráfico Mensal (Desde a Criação)";
   }
 
   renderAnalyticsModalContent();
@@ -1666,19 +1706,23 @@ function switchAnalyticsViewMode(mode) {
 function renderAnalyticsModalContent() {
   if (!currentAnalyticsLink) return;
   const link = currentAnalyticsLink;
-  const dailyClicks = link.dailyClicks || {};
   const totalClicks = Number(link.clicks) || 0;
+  const dailyClicks = getReconciledDailyClicks(link);
 
   const totalClicksEl = document.querySelector("#analytics-total-clicks");
   const curMonthClicksEl = document.querySelector("#analytics-current-month-clicks");
+  const periodLabelEl = document.querySelector("#analytics-period-label");
   const avgClicksEl = document.querySelector("#analytics-avg-clicks");
+  const avgLabelEl = document.querySelector("#analytics-avg-label");
   const peakClicksEl = document.querySelector("#analytics-peak-clicks");
+  const peakLabelEl = document.querySelector("#analytics-peak-label");
   const chartContainer = document.querySelector("#analytics-chart-container");
   const breakdownList = document.querySelector("#analytics-breakdown-list");
 
   if (totalClicksEl) totalClicksEl.innerText = totalClicks;
 
   const now = new Date();
+  const todayKey = now.toISOString().slice(0, 10);
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   if (currentAnalyticsMode === "monthly") {
@@ -1700,7 +1744,6 @@ function renderAnalyticsModalContent() {
       const monthDate = new Date(curY, curM, 1);
       const label = monthDate.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
       
-      // Soma cliques do mês em daily_clicks
       let mClicks = 0;
       Object.keys(dailyClicks).forEach(k => {
         if (k.startsWith(monthKey)) {
@@ -1722,74 +1765,78 @@ function renderAnalyticsModalContent() {
       }
     }
 
-    // Se houver discrepância por cliques anteriores ao histórico detalhado
-    let sumMonthly = monthsData.reduce((acc, curr) => acc + curr.clicks, 0);
-    if (totalClicks > sumMonthly && monthsData.length > 0) {
-      monthsData[0].clicks += (totalClicks - sumMonthly);
-    }
-
     const thisMonthObj = monthsData.find(m => m.key === currentMonthKey);
     if (curMonthClicksEl) curMonthClicksEl.innerText = thisMonthObj ? thisMonthObj.clicks : 0;
+    if (periodLabelEl) periodLabelEl.innerText = "Neste Mês";
 
     const avg = monthsData.length > 0 ? (totalClicks / monthsData.length).toFixed(1) : "0.0";
     if (avgClicksEl) avgClicksEl.innerText = `${avg}/mês`;
+    if (avgLabelEl) avgLabelEl.innerText = "Média Mensal";
 
     const peak = monthsData.reduce((max, m) => m.clicks > max ? m.clicks : max, 0);
     if (peakClicksEl) peakClicksEl.innerText = `${peak} max`;
+    if (peakLabelEl) peakLabelEl.innerText = "Pico Mensal";
 
-    // Renderiza SVG Gráfico Mensal
-    renderSvgBarChart(chartContainer, monthsData, totalClicks);
-
-    // Renderiza Lista de Detalhamento Mensal
+    renderSvgBarChart(chartContainer, monthsData, totalClicks, "monthly");
     renderBreakdownTable(breakdownList, monthsData, totalClicks);
   } else {
     // ==========================================
-    // MODO DIÁRIO (Últimos 30 dias)
+    // MODOS DIÁRIOS (7, 14 ou 30 Dias)
     // ==========================================
+    let daysCount = 7;
+    if (currentAnalyticsMode === "daily-14") daysCount = 14;
+    else if (currentAnalyticsMode === "daily-30") daysCount = 30;
+
     const daysData = [];
-    for (let i = 29; i >= 0; i--) {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    for (let i = daysCount - 1; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dateKey = d.toISOString().slice(0, 10);
-      const label = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-      const fullName = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-      const clicks = (dailyClicks && dailyClicks[dateKey]) ? Number(dailyClicks[dateKey]) : 0;
+      const isToday = d.toDateString() === now.toDateString();
+      const isYesterday = d.toDateString() === yesterday.toDateString();
+
+      let label = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      if (daysCount === 7) {
+        const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
+        const formattedDay = `${d.getDate()}/${d.getMonth() + 1}`;
+        label = isToday ? "Hoje" : isYesterday ? "Ontem" : `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${formattedDay}`;
+      }
+
+      const fullName = d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+      const clicks = Number(dailyClicks[dateKey]) || 0;
 
       daysData.push({
         key: dateKey,
         label: label,
         fullName: fullName,
-        clicks: clicks
+        clicks: clicks,
+        isToday: isToday
       });
     }
 
-    let sumDaily = daysData.reduce((acc, curr) => acc + curr.clicks, 0);
-    if (totalClicks > 0 && sumDaily === 0 && daysData.length > 0) {
-      daysData[daysData.length - 1].clicks = totalClicks;
-      sumDaily = totalClicks;
-    }
+    const todayClicks = Number(dailyClicks[todayKey]) || 0;
+    if (curMonthClicksEl) curMonthClicksEl.innerText = todayClicks;
+    if (periodLabelEl) periodLabelEl.innerText = "Cliques Hoje";
 
-    const thisMonthClicks = Object.keys(dailyClicks)
-      .filter(k => k.startsWith(currentMonthKey))
-      .reduce((acc, k) => acc + (Number(dailyClicks[k]) || 0), 0);
-    if (curMonthClicksEl) curMonthClicksEl.innerText = thisMonthClicks || totalClicks;
-
-    const avg = (sumDaily / 30).toFixed(1);
+    const totalInPeriod = daysData.reduce((acc, curr) => acc + curr.clicks, 0);
+    const avg = (totalInPeriod / daysCount).toFixed(1);
     if (avgClicksEl) avgClicksEl.innerText = `${avg}/dia`;
+    if (avgLabelEl) avgLabelEl.innerText = "Média Diária";
 
     const peak = daysData.reduce((max, d) => d.clicks > max ? d.clicks : max, 0);
     if (peakClicksEl) peakClicksEl.innerText = `${peak} max`;
+    if (peakLabelEl) peakLabelEl.innerText = "Melhor Dia";
 
-    // Renderiza SVG Gráfico Diário
-    renderSvgBarChart(chartContainer, daysData, totalClicks);
-
-    // Renderiza Lista de Detalhamento Diário
+    renderSvgBarChart(chartContainer, daysData, totalClicks, `daily-${daysCount}`);
     renderBreakdownTable(breakdownList, daysData, totalClicks);
   }
 }
 
 // Renderizador Universal de Gráficos de Barra SVG
-function renderSvgBarChart(container, dataPoints, totalClicks) {
+function renderSvgBarChart(container, dataPoints, totalClicks, mode = "daily-7") {
   if (!container) return;
 
   if (!dataPoints || dataPoints.length === 0) {
@@ -1798,43 +1845,48 @@ function renderSvgBarChart(container, dataPoints, totalClicks) {
   }
 
   const maxVal = Math.max(...dataPoints.map(d => d.clicks), 1);
-  const chartHeight = 170;
-  const paddingBottom = 26;
-  const paddingTop = 22;
+  const chartHeight = 185;
+  const paddingBottom = 30;
+  const paddingTop = 26;
   const usableHeight = chartHeight - paddingBottom - paddingTop;
   
   const totalBars = dataPoints.length;
-  const svgWidth = Math.max(520, totalBars * 46);
+  const svgWidth = 680;
+  const slotWidth = svgWidth / totalBars;
+
+  let barWidth = 42;
+  if (totalBars === 7) barWidth = 48;
+  else if (totalBars === 14) barWidth = 26;
+  else if (totalBars >= 28) barWidth = 13;
+  else barWidth = Math.min(50, slotWidth * 0.65);
 
   let barsSvg = "";
-  const slotWidth = svgWidth / totalBars;
-  const barWidth = Math.min(28, slotWidth * 0.65);
 
   dataPoints.forEach((item, idx) => {
     const xCenter = (idx * slotWidth) + (slotWidth / 2);
     const x = xCenter - (barWidth / 2);
-    const barH = item.clicks > 0 ? Math.max(6, Math.round((item.clicks / maxVal) * usableHeight)) : 3;
+    const barH = item.clicks > 0 ? Math.max(8, Math.round((item.clicks / maxVal) * usableHeight)) : 3;
     const y = chartHeight - paddingBottom - barH;
     const fill = item.clicks > 0 ? "url(#chart-bar-grad)" : "rgba(148, 163, 184, 0.15)";
     const percent = totalClicks > 0 ? ((item.clicks / totalClicks) * 100).toFixed(1) : 0;
-    const tooltipText = `${item.fullName || item.label}: ${item.clicks} cliques (${percent}%)`;
+    const tooltipText = `${item.fullName || item.label}: ${item.clicks} ${item.clicks === 1 ? 'clique' : 'cliques'} (${percent}% do total)`;
 
     barsSvg += `
       <g class="chart-bar-group">
         <!-- Barra -->
-        <rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" rx="3" fill="${fill}" class="chart-bar-rect">
+        <rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" rx="4" fill="${fill}" class="chart-bar-rect ${item.isToday ? 'chart-bar-today' : ''}">
           <title>${tooltipText}</title>
         </rect>
         
         <!-- Valor acima da barra se houver cliques -->
         ${item.clicks > 0 ? `
-          <text x="${xCenter}" y="${y - 5}" fill="#38bdf8" font-size="10" font-weight="700" font-family="'JetBrains Mono', monospace" text-anchor="middle">
+          <text x="${xCenter}" y="${y - 6}" fill="#38bdf8" font-size="${totalBars <= 7 ? '12' : '10'}" font-weight="700" font-family="'JetBrains Mono', monospace" text-anchor="middle">
             ${item.clicks}
           </text>
         ` : ''}
 
         <!-- Legenda do Eixo X -->
-        <text x="${xCenter}" y="${chartHeight - 8}" fill="var(--text-muted)" font-size="10" font-family="inherit" text-anchor="middle">
+        <text x="${xCenter}" y="${chartHeight - 8}" fill="${item.isToday ? '#38bdf8' : 'var(--text-muted)'}" font-size="${totalBars <= 7 ? '11' : totalBars <= 14 ? '10' : '9'}" font-weight="${item.isToday ? '700' : '500'}" font-family="inherit" text-anchor="middle">
           ${item.label}
         </text>
       </g>
@@ -1842,7 +1894,7 @@ function renderSvgBarChart(container, dataPoints, totalClicks) {
   });
 
   container.innerHTML = `
-    <svg width="${svgWidth}" height="${chartHeight}" class="chart-svg-main" viewBox="0 0 ${svgWidth} ${chartHeight}">
+    <svg width="100%" height="${chartHeight}" class="chart-svg-main" viewBox="0 0 ${svgWidth} ${chartHeight}" style="max-width: 100%;">
       <defs>
         <linearGradient id="chart-bar-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#38bdf8" />
@@ -1851,7 +1903,7 @@ function renderSvgBarChart(container, dataPoints, totalClicks) {
       </defs>
       
       <!-- Linhas de Grid Guia -->
-      <line x1="0" y1="${chartHeight - paddingBottom}" x2="${svgWidth}" y2="${chartHeight - paddingBottom}" stroke="rgba(255,255,255,0.1)" stroke-width="1" />
+      <line x1="0" y1="${chartHeight - paddingBottom}" x2="${svgWidth}" y2="${chartHeight - paddingBottom}" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
       <line x1="0" y1="${chartHeight - paddingBottom - (usableHeight / 2)}" x2="${svgWidth}" y2="${chartHeight - paddingBottom - (usableHeight / 2)}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
       <line x1="0" y1="${paddingTop}" x2="${svgWidth}" y2="${paddingTop}" stroke="rgba(255,255,255,0.05)" stroke-dasharray="3 3" />
 

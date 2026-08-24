@@ -8,25 +8,25 @@
   <meta name="description" content="Painel de controle e gerenciamento de links encurtados, contador de cliques e estatísticas de acesso." />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=58.0" />
-  <link rel="icon" type="image/png" href="../favicon.png?v=58.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=58.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=58.0" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=59.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=59.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=59.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=59.0" />
 
   <title>Shortener - Painel de Controle (Dashboard)</title>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=58.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=59.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=58.0"></script>
-  <script type="text/javascript" src="../b64.js?v=58.0"></script>
-  <script type="text/javascript" src="../api.js?v=58.0"></script>
-  <script type="text/javascript" src="../profanity-filter.js?v=58.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=58.0"></script>
-  <script type="text/javascript" src="../auth.js?v=58.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=58.0"></script>
-  <script type="text/javascript" src="../totp.js?v=58.0"></script>
-  <script type="text/javascript" src="painel.js?v=58.0"></script>
+  <script type="text/javascript" src="../config.js?v=59.0"></script>
+  <script type="text/javascript" src="../b64.js?v=59.0"></script>
+  <script type="text/javascript" src="../api.js?v=59.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=59.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=59.0"></script>
+  <script type="text/javascript" src="../auth.js?v=59.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=59.0"></script>
+  <script type="text/javascript" src="../totp.js?v=59.0"></script>
+  <script type="text/javascript" src="painel.js?v=59.0"></script>
 </head>
 
 <body onload="initDashboard()">
@@ -611,15 +611,15 @@
         </div>
         <div class="analytics-stat-card">
           <div class="stat-value" id="analytics-current-month-clicks" style="color: #6ee7b7; font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0</div>
-          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Neste Mês</div>
+          <div class="stat-label" id="analytics-period-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Hoje</div>
         </div>
         <div class="analytics-stat-card">
           <div class="stat-value" id="analytics-avg-clicks" style="color: #c4b5fd; font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0.0</div>
-          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Média Diária</div>
+          <div class="stat-label" id="analytics-avg-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Média Diária</div>
         </div>
         <div class="analytics-stat-card">
           <div class="stat-value" id="analytics-peak-clicks" style="color: #fbbf24; font-size: 1.35rem; font-weight: 800; font-family: 'JetBrains Mono', monospace;">0</div>
-          <div class="stat-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Pico de Acessos</div>
+          <div class="stat-label" id="analytics-peak-label" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Pico do Período</div>
         </div>
       </div>
 
@@ -627,15 +627,21 @@
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 0.4rem;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary);"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-          <strong style="color: #fff; font-size: 0.95rem;" id="analytics-chart-heading">Gráfico Mensal (Desde a Criação)</strong>
+          <strong style="color: #fff; font-size: 0.95rem;" id="analytics-chart-heading">Gráfico Diário (Últimos 7 Dias)</strong>
         </div>
 
-        <div style="display: flex; gap: 0.35rem; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.2rem;">
-          <button type="button" class="analytics-toggle-btn active" id="btn-toggle-monthly" onclick="switchAnalyticsViewMode('monthly')">
-            📆 Mensal (Desde a Criação)
+        <div style="display: flex; gap: 0.35rem; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.2rem; flex-wrap: wrap;">
+          <button type="button" class="analytics-toggle-btn active" id="btn-toggle-daily-7" onclick="switchAnalyticsViewMode('daily-7')">
+            📅 7 Dias
           </button>
-          <button type="button" class="analytics-toggle-btn" id="btn-toggle-daily" onclick="switchAnalyticsViewMode('daily')">
-            📅 Diário (Últimos 30 Dias)
+          <button type="button" class="analytics-toggle-btn" id="btn-toggle-daily-14" onclick="switchAnalyticsViewMode('daily-14')">
+            📅 14 Dias
+          </button>
+          <button type="button" class="analytics-toggle-btn" id="btn-toggle-daily-30" onclick="switchAnalyticsViewMode('daily-30')">
+            📅 30 Dias
+          </button>
+          <button type="button" class="analytics-toggle-btn" id="btn-toggle-monthly" onclick="switchAnalyticsViewMode('monthly')">
+            📆 Mensal
           </button>
         </div>
       </div>
@@ -680,6 +686,7 @@
 </body>
 
 </html>
+
 
 
 
