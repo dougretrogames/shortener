@@ -186,6 +186,13 @@ async function onDecrypt() {
       return;
     }
 
+    // Valida se o link temporário de visitante expirou (30 dias)
+    const expiresAt = params.expires_at || params.expiresAt;
+    if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+      showStatus("Este link temporário de visitante expirou após 30 dias de validade. Para criar links permanentes sem expiração, conecte-se com sua conta no Shortener.", true);
+      return;
+    }
+
     // Caso o link possua uma dica de senha, exibe na tela
     if (params.h && typeof params.h === "string") {
       const hintMsg = `💡 Dica de senha: "${escapeHtml(params.h)}"`;

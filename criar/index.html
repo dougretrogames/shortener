@@ -29,17 +29,17 @@
   <meta name="twitter:image:alt" content="Shortener: Encurtador de Links Protegidos" />
 
   <!-- Ícones -->
-  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=71.0" />
-  <link rel="icon" type="image/png" href="../favicon.png?v=71.0" />
-  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=71.0" />
-  <link rel="apple-touch-icon" href="../favicon.png?v=71.0" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg?v=72.0" />
+  <link rel="icon" type="image/png" href="../favicon.png?v=72.0" />
+  <link rel="shortcut icon" type="image/x-icon" href="../favicon.ico?v=72.0" />
+  <link rel="apple-touch-icon" href="../favicon.png?v=72.0" />
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="../style.css?v=71.0" type="text/css" />
+  <link rel="stylesheet" href="../style.css?v=72.0" type="text/css" />
 
-  <script type="text/javascript" src="../config.js?v=71.0"></script>
-  <script type="text/javascript" src="../b64.js?v=71.0"></script>
-  <script type="text/javascript" src="../api.js?v=71.0"></script>
+  <script type="text/javascript" src="../config.js?v=72.0"></script>
+  <script type="text/javascript" src="../b64.js?v=72.0"></script>
+  <script type="text/javascript" src="../api.js?v=72.0"></script>
   <script type="text/javascript">
     function error(text) {
       const errorEl = document.querySelector(".error");
@@ -103,12 +103,12 @@
       initHistory();
     }
   </script>
-  <script type="text/javascript" src="../profanity-filter.js?v=71.0"></script>
-  <script type="text/javascript" src="../supabase-db.js?v=71.0"></script>
-  <script type="text/javascript" src="../auth.js?v=71.0"></script>
-  <script type="text/javascript" src="../totp.js?v=71.0"></script>
-  <script type="text/javascript" src="../tracker.js?v=71.0"></script>
-  <script type="text/javascript" src="criar.js?v=71.0"></script>
+  <script type="text/javascript" src="../profanity-filter.js?v=72.0"></script>
+  <script type="text/javascript" src="../supabase-db.js?v=72.0"></script>
+  <script type="text/javascript" src="../auth.js?v=72.0"></script>
+  <script type="text/javascript" src="../totp.js?v=72.0"></script>
+  <script type="text/javascript" src="../tracker.js?v=72.0"></script>
+  <script type="text/javascript" src="criar.js?v=72.0"></script>
 </head>
 
 <body onload="main()">
@@ -219,6 +219,24 @@
         Configurar Link Protegido
       </h2>
 
+      <!-- Aviso de Validade de 1 mês para Visitantes / Orientação para Login -->
+      <div id="visitor-validity-notice" style="display: none; background: rgba(245, 158, 11, 0.08); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 0.75rem 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.55rem; color: #fbbf24; font-size: 0.85rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span><strong>Validade de 1 mês:</strong> Links criados como visitante expiram após <strong>30 dias</strong>. Para criar links <strong>permanentes</strong> e sem expiração, conecte-se à sua conta.</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="openLoginModal()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            <span>Entrar</span>
+          </button>
+        </div>
+      </div>
+
       <div class="form-group labeled-input">
         <label for="url">Link Secreto (URL de Destino)</label>
         <input 
@@ -256,11 +274,13 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary); flex-shrink: 0;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               <span>Apelidos personalizados são exclusivos para <strong>usuários conectados</strong>. Links anônimos recebem códigos aleatórios.</span>
             </div>
-            <button type="button" class="btn btn-github btn-sm" onclick="loginWithGitHubOAuth()" style="padding: 0.35rem 0.65rem; font-size: 0.78rem; white-space: nowrap;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openLoginModal()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; white-space: nowrap;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
               </svg>
-              <span>Entrar com GitHub</span>
+              <span>Entrar</span>
             </button>
           </div>
         </div>
@@ -348,8 +368,10 @@
           </svg>
           Testar Link
         </a>
-
       </div>
+
+      <!-- Informação de Validade do Link Gerado -->
+      <div id="output-validity-info" style="margin-top: 1rem;"></div>
 
       <div class="alert-toast">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -411,6 +433,7 @@
 </body>
 
 </html>
+
 
 
 

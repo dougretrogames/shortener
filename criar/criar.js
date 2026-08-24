@@ -243,6 +243,7 @@ async function renderHistory() {
             targetUrl: enc.t || enc.u || `Link Protegido (/${item.slug})`,
             outputUrl: `${cleanBaseUrl}${encodeURIComponent(item.slug)}`,
             clicks: Number(item.clicks) || 0,
+            expiresAt: item.expires_at || enc.expires_at || null,
             createdAt: item.created_at || new Date().toISOString()
           };
         });
@@ -268,11 +269,26 @@ async function renderHistory() {
 
   listEl.innerHTML = links.map(item => {
     const clicks = item.clicks || 0;
+    const expiresAt = item.expiresAt || item.expires_at || null;
+    let validityBadge = "";
+    if (expiresAt) {
+      const isExpired = new Date(expiresAt).getTime() < Date.now();
+      if (isExpired) {
+        validityBadge = `<span class="badge badge-danger" style="font-size: 0.7rem; background: rgba(239, 68, 68, 0.15); color: #f87171;">⚠️ Expirado</span>`;
+      } else {
+        const expDate = new Date(expiresAt).toLocaleDateString('pt-BR');
+        validityBadge = `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.7rem;" title="Link temporário de visitante válido até ${expDate}">⏱️ Expira em ${expDate}</span>`;
+      }
+    } else {
+      validityBadge = `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; font-size: 0.7rem;" title="Link permanente vinculado à sua conta">🛡️ Permanente</span>`;
+    }
+
     return `
     <div class="history-item">
       <div class="history-info">
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
           <span class="history-slug">/${escapeHtml(item.slug || 'link')}</span>
+          ${validityBadge}
           ${item.hint ? `<span class="badge" style="background: rgba(99,102,241,0.15); color: #a5b4fc; font-size: 0.7rem;">Dica: ${escapeHtml(item.hint)}</span>` : ''}
           <a href="../painel/" class="clicks-badge" style="text-decoration: none; font-size: 0.75rem; padding: 0.15rem 0.45rem;" title="Ver gráficos diários e mensais no Painel">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -303,17 +319,20 @@ function updateAuthSlugState() {
   const isAuth = window.authManager && window.authManager.isAuthenticated();
   const slugInputWrapper = document.querySelector("#slug-input-wrapper");
   const slugLoginNotice = document.querySelector("#slug-login-notice");
+  const visitorValidityNotice = document.querySelector("#visitor-validity-notice");
   const slugStatus = document.querySelector("#slug-status");
   const customSlugInput = document.querySelector("#custom-slug");
 
   if (!isAuth) {
     if (slugInputWrapper) slugInputWrapper.style.display = "none";
     if (slugLoginNotice) slugLoginNotice.style.display = "block";
+    if (visitorValidityNotice) visitorValidityNotice.style.display = "block";
     if (slugStatus) slugStatus.style.display = "none";
     if (customSlugInput) customSlugInput.value = "";
   } else {
     if (slugInputWrapper) slugInputWrapper.style.display = "flex";
     if (slugLoginNotice) slugLoginNotice.style.display = "none";
+    if (visitorValidityNotice) visitorValidityNotice.style.display = "none";
   }
 
   // Atualiza cabeçalho do histórico de acordo com a sessão
@@ -326,8 +345,8 @@ function updateAuthSlugState() {
   }
   if (historyDesc) {
     historyDesc.innerText = isAuth
-      ? "Links salvos localmente e sincronizados com sua conta no Painel."
-      : "Links encurtados gerados anonimamente salvos no cache deste navegador para seu acesso rápido.";
+      ? "Links salvos localmente e sincronizados com sua conta no Painel (Permanentes)."
+      : "Links encurtados gerados anonimamente salvos no cache deste navegador (Validade de 30 dias).";
   }
 }
 
@@ -737,6 +756,15 @@ async function onEncrypt() {
     const authorName = isCurrentlyAuth && authUser ? `@${authorUsername}` : "Visitante";
     const authorAvatar = isCurrentlyAuth && authUser ? (authUser.avatar || "") : "";
 
+    // Define a validade: Visitantes = 1 mês (30 dias); Usuários logados = Permanente (null)
+    const expiresAt = (!isCurrentlyAuth || authorType === "visitante")
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
+    if (parsedEncrypted) {
+      parsedEncrypted.expires_at = expiresAt;
+    }
+
     // Salva no Supabase Nuvem com vinculação à conta criadora (Multi-Dispositivo)
     if (window.supabaseDb && customSlug) {
       try {
@@ -749,7 +777,8 @@ async function onEncrypt() {
           authorUsername: authorUsername,
           authorId: authorId,
           authorName: authorName,
-          authorAvatar: authorAvatar
+          authorAvatar: authorAvatar,
+          expiresAt: expiresAt
         });
       } catch (e) {
         console.warn("[Supabase] Erro ao salvar na nuvem:", e);
@@ -771,6 +800,7 @@ async function onEncrypt() {
         authorId: authorId,
         authorName: authorName,
         authorAvatar: authorAvatar,
+        expiresAt: expiresAt,
         clicks: 0,
         createdAt: new Date().toISOString()
       });
@@ -780,6 +810,32 @@ async function onEncrypt() {
     const outputSection = document.querySelector("#output-section");
     if (outputSection) {
       outputSection.style.display = "block";
+    }
+
+    const outputValidityInfo = document.querySelector("#output-validity-info");
+    if (outputValidityInfo) {
+      if (expiresAt) {
+        const expDate = new Date(expiresAt).toLocaleDateString('pt-BR');
+        outputValidityInfo.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; background: rgba(245, 158, 11, 0.09); border: 1px dashed rgba(245, 158, 11, 0.35); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; color: #fbbf24; font-size: 0.82rem;">
+            <div style="display: flex; align-items: center; gap: 0.45rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span><strong>Validade do Link:</strong> Este link anônimo expira em <strong>${expDate} (30 dias)</strong>.</span>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="openLoginModal()" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; white-space: nowrap;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+              <span>Entrar para torná-lo permanente</span>
+            </button>
+          </div>
+        `;
+      } else {
+        outputValidityInfo.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.45rem; background: rgba(16, 185, 129, 0.09); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 0.65rem 0.85rem; color: #6ee7b7; font-size: 0.82rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span><strong>Link Permanente:</strong> Vinculado com sucesso à sua conta (@${escapeHtml(authorUsername)}), sem prazo de expiração.</span>
+          </div>
+        `;
+      }
     }
 
     const slugDbInfo = document.querySelector("#slug-db-info");

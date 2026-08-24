@@ -167,6 +167,13 @@ async function main() {
       return;
     }
 
+    // Valida se o link temporário de visitante expirou (30 dias)
+    const expiresAt = params.expires_at || params.expiresAt;
+    if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+      error("Este link temporário de visitante expirou após 30 dias de validade. Para criar links permanentes sem expiração, conecte-se com sua conta no Shortener.");
+      return;
+    }
+
     // Contabiliza o clique em tempo real no banco de dados Supabase imediatamente ao abrir o link
     const finalSlug = (customSlug || (rawHash ? rawHash.split("@")[0] : "")).trim().toLowerCase();
     if (window.supabaseDb && finalSlug) {

@@ -194,6 +194,7 @@ function mapRemoteRecord(remote, user) {
     authorId: remote.author_id || enc.author_id || null,
     isPasswordProtected: isPasswordProtected,
     dailyClicks: (enc.daily_clicks && typeof enc.daily_clicks === "object") ? enc.daily_clicks : {},
+    expiresAt: remote.expires_at || enc.expires_at || null,
     createdAt: remote.created_at || new Date().toISOString()
   };
 }
@@ -625,7 +626,20 @@ function renderLinksTable() {
           `}
         </td>
         <td style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">
-          ${dateFormatted}
+          <div>${dateFormatted}</div>
+          ${link.expiresAt ? `
+            <div style="margin-top: 0.2rem;">
+              ${new Date(link.expiresAt).getTime() < Date.now() ? `
+                <span class="badge badge-danger" style="font-size: 0.68rem; padding: 0.1rem 0.35rem; background: rgba(239, 68, 68, 0.15); color: #f87171;">⚠️ Expirado</span>
+              ` : `
+                <span class="badge" style="font-size: 0.68rem; padding: 0.1rem 0.35rem; background: rgba(245, 158, 11, 0.15); color: #fbbf24;" title="Expira em ${new Date(link.expiresAt).toLocaleDateString('pt-BR')}">⏱️ Expira em ${new Date(link.expiresAt).toLocaleDateString('pt-BR')}</span>
+              `}
+            </div>
+          ` : `
+            <div style="margin-top: 0.2rem;">
+              <span class="badge" style="font-size: 0.68rem; padding: 0.1rem 0.35rem; background: rgba(16, 185, 129, 0.12); color: #6ee7b7;">🛡️ Permanente</span>
+            </div>
+          `}
         </td>
         <td class="td-actions">
           <div class="table-actions" style="justify-content: flex-end;">

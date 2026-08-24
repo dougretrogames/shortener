@@ -267,20 +267,22 @@ const supabaseDb = {
   },
 
   // Salva um novo link no Supabase com identificação e vinculação definitiva da conta
-  async saveLink({ slug, encryptedData, hint, targetUrl, authorType, authorUsername, authorId, authorName, authorAvatar }) {
+  async saveLink({ slug, encryptedData, hint, targetUrl, authorType, authorUsername, authorId, authorName, authorAvatar, expiresAt }) {
     if (!slug || !encryptedData) return false;
     const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
     const cleanAuthorType = authorType || "visitante";
     const cleanAuthorUsername = (authorUsername || (cleanAuthorType === "google" ? "google" : cleanAuthorType === "github" ? "github" : "visitante")).toLowerCase().replace(/^@/, '');
     const cleanAuthorId = authorId || (cleanAuthorType !== "visitante" ? `${cleanAuthorType}_${cleanAuthorUsername}` : null);
     const cleanAuthorName = (cleanAuthorType !== "visitante") ? `@${cleanAuthorUsername}` : "Visitante";
+    const cleanExpiresAt = expiresAt || (cleanAuthorType === "visitante" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
     
-    // Injeta os dados definitivos da conta criadora e URL de destino dentro de encrypted_data (JSONB)
+    // Injeta os dados definitivos da conta criadora, validade e URL de destino dentro de encrypted_data (JSONB)
     if (typeof encryptedData === "object" && encryptedData !== null) {
       encryptedData.author_type = cleanAuthorType;
       encryptedData.author_username = cleanAuthorUsername;
       encryptedData.author_id = cleanAuthorId;
       encryptedData.author_name = cleanAuthorName;
+      encryptedData.expires_at = cleanExpiresAt;
       if (authorAvatar) encryptedData.author_avatar = authorAvatar;
       if (targetUrl) {
         encryptedData.target_url = targetUrl;
@@ -298,7 +300,8 @@ const supabaseDb = {
         created_at: new Date().toISOString(),
         author_type: cleanAuthorType,
         author_name: cleanAuthorName,
-        author_id: cleanAuthorId
+        author_id: cleanAuthorId,
+        expires_at: cleanExpiresAt
       };
 
       const res = await fetch(endpoint, {
@@ -317,7 +320,7 @@ const supabaseDb = {
     }
   },
 
-  // Atualiza os dados de autoria/vinculação de um link (usado para migrar links de visitante para usuário conectado)
+  // Atualiza os dados de autoria/vinculação de um link (usado para migrar links de visitante para usuário conectado tornando-os permanentes)
   async updateLinkAuthor(slug, { authorType, authorUsername, authorId, authorName, authorAvatar, targetUrl }) {
     if (!slug) return false;
     const cleanSlug = String(slug).trim().replace(/^[/#]+/, '');
@@ -340,6 +343,7 @@ const supabaseDb = {
       enc.author_username = finalUser;
       enc.author_id = finalId;
       enc.author_name = finalName;
+      enc.expires_at = null; // Torna o link permanente ao ser vinculado à conta
       if (authorAvatar) enc.author_avatar = authorAvatar;
       if (targetUrl && !enc.target_url) {
         enc.target_url = targetUrl;
@@ -358,7 +362,8 @@ const supabaseDb = {
           encrypted_data: enc,
           author_type: finalType,
           author_name: finalName,
-          author_id: finalId
+          author_id: finalId,
+          expires_at: null
         })
       });
 
