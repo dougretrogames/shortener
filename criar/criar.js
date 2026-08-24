@@ -670,12 +670,10 @@ async function onEncrypt() {
       `;
     }
 
-    // Parâmetros de criptografia
+    // Parâmetros de criptografia (Padrão de segurança máxima com IV e Salt aleatórios)
     const url = document.querySelector("#url").value.trim();
-    const ivCheckbox = document.querySelector("#iv");
-    const saltCheckbox = document.querySelector("#salt");
-    const useRandomIv = ivCheckbox ? ivCheckbox.checked : true;
-    const useRandomSalt = saltCheckbox ? saltCheckbox.checked : true;
+    const useRandomIv = true;
+    const useRandomSalt = true;
     const hint = document.querySelector("#hint") ? document.querySelector("#hint").value.trim() : "";
     const isAuth = window.authManager && window.authManager.isAuthenticated();
     const rawSlug = isAuth && document.querySelector("#custom-slug") ? document.querySelector("#custom-slug").value.trim() : "";
@@ -879,19 +877,6 @@ async function copyDirectText(text) {
     setTimeout(() => {
       alertToast.classList.remove("visible");
     }, 3000);
-  }
-}
-
-
-// Aviso de segurança ao tentar desativar o IV aleatório
-function onIvCheck(checkbox) {
-  if (!checkbox.checked) {
-    checkbox.checked = !confirm(
-      "Aviso de Segurança:\n\n" +
-      "Apenas desative a randomização do Vetor de Inicialização (IV) se tiver certeza absoluta do que está fazendo.\n\n" +
-      "Desativar este recurso compromete a segurança criptográfica dos links gerados e economiza apenas de 20 a 25 caracteres no tamanho da URL.\n\n" +
-      "Clique em 'Cancelar' para manter a proteção máxima ativada."
-    );
   }
 }
 
