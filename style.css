@@ -250,8 +250,7 @@ body {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  order: 3;
-  margin-left: 0.4rem;
+  margin-left: 0.5rem;
 }
 
 .mobile-menu-toggle {
@@ -339,38 +338,37 @@ body {
   display: inline;
 }
 
-@media (max-width: 860px), (orientation: landscape) and (max-height: 550px) {
+@media (max-width: 860px) {
   .site-header {
     width: 100%;
     overflow-x: clip;
   }
 
   .header-container {
-    padding: 0.45rem 0.75rem !important;
-    display: grid !important;
-    grid-template-columns: 1fr auto 1fr !important;
+    padding: 0.5rem 0.85rem !important;
+    display: flex !important;
+    justify-content: space-between !important;
     align-items: center !important;
-    gap: 0.35rem !important;
+    flex-wrap: nowrap !important;
+    gap: 0.4rem !important;
     position: relative !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
   .brand {
-    grid-column: 1 !important;
-    justify-self: start !important;
     display: inline-flex !important;
     align-items: center !important;
     flex: 0 0 auto !important;
-    font-size: 0.95rem !important;
-    gap: 0.35rem !important;
+    font-size: 1rem !important;
+    gap: 0.4rem !important;
     min-width: 0 !important;
     white-space: nowrap !important;
   }
 
   .brand-icon {
-    width: 18px !important;
-    height: 18px !important;
+    width: 20px !important;
+    height: 20px !important;
     flex-shrink: 0 !important;
   }
 
@@ -379,37 +377,33 @@ body {
     font-weight: 700 !important;
   }
 
-  /* Botão de Autenticação / Perfil do Usuário rigorosamente centralizado no meio exato do cabeçalho via CSS Grid */
+  /* Botão de Autenticação / Perfil do Usuário e Menu alinhados na mesma linha à direita */
   .auth-slot {
-    grid-column: 2 !important;
-    justify-self: center !important;
-    margin: 0 auto !important;
+    margin-left: auto !important;
+    margin-right: 0.15rem !important;
     display: inline-flex !important;
     align-items: center !important;
-    justify-content: center !important;
+    flex-shrink: 0 !important;
     position: static !important;
     transform: none !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    pointer-events: auto !important;
   }
 
   .auth-btn-text-desktop {
-    display: none !important;
+    display: inline !important;
   }
 
   .auth-btn-text-mobile {
-    display: inline !important;
+    display: none !important;
   }
 
   .auth-slot .auth-login-btn {
     display: inline-flex !important;
     align-items: center !important;
-    padding: 0.25rem 0.55rem !important;
-    font-size: 0.76rem !important;
-    min-height: 30px !important;
-    height: 30px !important;
-    gap: 0.3rem !important;
+    padding: 0.3rem 0.65rem !important;
+    font-size: 0.82rem !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    gap: 0.35rem !important;
     white-space: nowrap !important;
     flex-shrink: 0 !important;
   }
@@ -420,32 +414,30 @@ body {
     flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 0.25rem !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
+    flex-shrink: 0 !important;
   }
 
   .user-avatar-btn {
     display: inline-flex !important;
     align-items: center !important;
-    padding: 0.15rem 0.4rem 0.15rem 0.2rem !important;
-    font-size: 0.72rem !important;
-    min-height: 30px !important;
-    height: 30px !important;
-    gap: 0.25rem !important;
-    min-width: 0 !important;
-    max-width: 115px !important;
+    padding: 0.15rem 0.45rem 0.15rem 0.25rem !important;
+    font-size: 0.78rem !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    gap: 0.3rem !important;
+    max-width: 120px !important;
     flex-shrink: 1 !important;
   }
 
   .user-avatar-img {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
     flex-shrink: 0 !important;
   }
 
   .user-name-label {
-    max-width: 70px !important;
-    font-size: 0.72rem !important;
+    max-width: 75px !important;
+    font-size: 0.78rem !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
@@ -455,37 +447,36 @@ body {
   .user-logout-btn {
     display: inline-flex !important;
     align-items: center !important;
-    padding: 0.2rem 0.4rem !important;
-    font-size: 0.72rem !important;
-    min-height: 30px !important;
-    height: 30px !important;
+    padding: 0.25rem 0.45rem !important;
+    font-size: 0.76rem !important;
+    min-height: 34px !important;
+    height: 34px !important;
     gap: 0.2rem !important;
     flex-shrink: 0 !important;
     white-space: nowrap !important;
   }
 
   .user-logout-btn svg {
-    width: 12px !important;
-    height: 12px !important;
+    width: 13px !important;
+    height: 13px !important;
   }
 
   .mobile-menu-toggle {
-    grid-column: 3 !important;
-    justify-self: end !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
     padding: 0 !important;
     flex-shrink: 0 !important;
+    margin-left: 0.2rem !important;
   }
 
   .mobile-menu-toggle svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 20px !important;
+    height: 20px !important;
   }
 
   .site-header nav {
