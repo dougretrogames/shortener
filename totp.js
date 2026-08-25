@@ -128,9 +128,16 @@ const TOTP = (() => {
 
   function enable2FA(secret, rememberDays = 30) {
     if (!secret) return;
-    localStorage.setItem(STORAGE_KEY_SECRET, secret.trim().toUpperCase());
+    const cleanSecret = secret.trim().toUpperCase();
+    localStorage.setItem(STORAGE_KEY_SECRET, cleanSecret);
     localStorage.setItem(STORAGE_KEY_ENABLED, "true");
     setSessionVerified(true, rememberDays);
+
+    if (typeof window !== "undefined" && window.supabaseDb && typeof window.supabaseDb.saveUser2FA === "function") {
+      window.supabaseDb.saveUser2FA(cleanSecret, true).catch(err => {
+        console.warn("[TOTP] Aviso ao sincronizar 2FA na nuvem:", err);
+      });
+    }
   }
 
   function disable2FA() {
@@ -138,6 +145,22 @@ const TOTP = (() => {
     localStorage.removeItem(STORAGE_KEY_ENABLED);
     localStorage.removeItem(STORAGE_KEY_REMEMBERED_UNTIL);
     sessionStorage.removeItem(SESSION_KEY_VERIFIED);
+
+    if (typeof window !== "undefined" && window.supabaseDb && typeof window.supabaseDb.saveUser2FA === "function") {
+      window.supabaseDb.saveUser2FA(null, false).catch(err => {
+        console.warn("[TOTP] Aviso ao desativar 2FA na nuvem:", err);
+      });
+    }
+  }
+
+  function syncFromCloud(secret, enabled = true) {
+    if (enabled && secret) {
+      localStorage.setItem(STORAGE_KEY_SECRET, secret.trim().toUpperCase());
+      localStorage.setItem(STORAGE_KEY_ENABLED, "true");
+    } else {
+      localStorage.removeItem(STORAGE_KEY_SECRET);
+      localStorage.removeItem(STORAGE_KEY_ENABLED);
+    }
   }
 
   function isDeviceRemembered() {
@@ -192,6 +215,7 @@ const TOTP = (() => {
     getSavedSecret,
     enable2FA,
     disable2FA,
+    syncFromCloud,
     isDeviceRemembered,
     isSessionVerified,
     setSessionVerified,

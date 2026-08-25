@@ -74,6 +74,13 @@ function initDashboard() {
     if (thCheckbox) thCheckbox.style.display = "none";
   }
 
+  // Sincroniza configurações de 2FA salvas na nuvem antes de verificar
+  if (user && user.accessToken && window.supabaseDb && typeof window.supabaseDb.syncUser2FA === "function") {
+    try {
+      await window.supabaseDb.syncUser2FA(user.accessToken);
+    } catch (e) {}
+  }
+
   updateSessionInfo();
 
   // Se o usuário for administrador e o 2FA estiver ativado mas ainda não validado nesta sessão,
@@ -979,7 +986,21 @@ async function checkEditSlugAvailability() {
     .replace(/[\s_]+/g, "-")
     .replace(/[@#?&/\\:]+/g, "");
 
-  // 1. Verificação de profanidade
+  // 1. Se o novo slug for idêntico ao original (ignorando maiúsculas/minúsculas), está disponível (é o mesmo link!)
+  if (newSlug.toLowerCase() === originalSlug.toLowerCase()) {
+    statusEl.style.display = "flex";
+    statusEl.className = "slug-status available";
+    statusEl.style.color = "";
+    statusEl.style.border = "";
+    statusEl.style.background = "";
+    statusEl.innerHTML = `
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span>Apelido atual do link mantido!</span>
+    `;
+    return;
+  }
+
+  // 2. Verificação de profanidade
   if (window.profanityFilter && window.profanityFilter.isProfane(newSlug)) {
     statusEl.style.display = "flex";
     statusEl.className = "slug-status exists";
@@ -993,10 +1014,10 @@ async function checkEditSlugAvailability() {
     return;
   }
 
-  // 2. Consulta no cache local de links carregados
+  // 3. Consulta no cache local de links carregados
   const existsLocal = allLinks.some(l => l.slug && l.slug.toLowerCase() === newSlug.toLowerCase() && l.slug.toLowerCase() !== originalSlug.toLowerCase());
 
-  // 3. Consulta global em tempo real no Supabase
+  // 4. Consulta global em tempo real no Supabase
   let existsRemote = false;
   if (window.supabaseDb) {
     try {
@@ -1048,7 +1069,8 @@ async function saveEditedLink(e) {
     return;
   }
 
-  if (newSlug !== originalSlug.toLowerCase()) {
+  // Se o slug mudou, verifica se já existe outro link com esse novo nome
+  if (newSlug.toLowerCase() !== originalSlug.toLowerCase()) {
     if (window.supabaseDb) {
       const exists = await window.supabaseDb.exists(newSlug);
       if (exists) {

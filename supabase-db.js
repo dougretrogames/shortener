@@ -144,6 +144,58 @@ const supabaseDb = {
     return null;
   },
 
+  // Salva e sincroniza as configurações de 2FA do usuário na nuvem (Supabase auth.users user_metadata)
+  async saveUser2FA(secret, enabled = true) {
+    const user = (typeof window !== "undefined" && window.authManager) ? window.authManager.getUser() : null;
+    const token = user ? user.accessToken : null;
+    if (!token) return false;
+
+    try {
+      const endpoint = `${SUPABASE_CONFIG.url}/auth/v1/user`;
+      const res = await fetch(endpoint, {
+        method: "PUT",
+        headers: {
+          "apikey": SUPABASE_CONFIG.key,
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          data: {
+            totp_secret: enabled ? (secret || "") : null,
+            totp_enabled: !!enabled
+          }
+        })
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn("[Supabase] Erro ao sincronizar 2FA na nuvem:", e);
+      return false;
+    }
+  },
+
+  // Consulta e sincroniza as configurações de 2FA do usuário na nuvem
+  async syncUser2FA(accessToken) {
+    const token = accessToken || ((typeof window !== "undefined" && window.authManager && window.authManager.getUser()) ? window.authManager.getUser().accessToken : null);
+    if (!token) return null;
+
+    try {
+      const cloudUser = await this.getUserFromToken(token);
+      if (cloudUser && cloudUser.user_metadata && typeof window !== "undefined" && window.TOTP) {
+        const meta = cloudUser.user_metadata;
+        if (meta.totp_enabled && meta.totp_secret) {
+          window.TOTP.syncFromCloud(meta.totp_secret, true);
+          return { enabled: true, secret: meta.totp_secret };
+        } else if (meta.totp_enabled === false) {
+          window.TOTP.syncFromCloud(null, false);
+          return { enabled: false, secret: null };
+        }
+      }
+    } catch (e) {
+      console.warn("[Supabase] Falha ao consultar 2FA da nuvem:", e);
+    }
+    return null;
+  },
+
   // Busca um link pelo slug no Supabase
   async getLink(slug) {
     if (!slug) return null;

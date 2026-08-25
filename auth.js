@@ -446,6 +446,14 @@ async function applyUserSession(data, accessToken, refreshToken) {
   };
 
   window.authManager.saveUser(userData);
+
+  // Sincroniza configurações de 2FA do usuário na nuvem se presentes no user_metadata do Supabase
+  if (meta && meta.totp_enabled && meta.totp_secret && window.TOTP) {
+    window.TOTP.syncFromCloud(meta.totp_secret, true);
+  } else if (meta && meta.totp_enabled === false && window.TOTP) {
+    window.TOTP.syncFromCloud(null, false);
+  }
+
   if (window.TOTP && typeof window.TOTP.isDeviceRemembered === "function" && window.TOTP.isDeviceRemembered()) {
     sessionStorage.setItem("shortener_admin_2fa_session_verified", "true");
   } else {
@@ -592,6 +600,12 @@ function escapeHtml(str) {
 async function initAuth() {
   await handleOAuthCallback();
   renderAuthHeader();
+
+  // Sincroniza estado de 2FA salvo na nuvem se o usuário estiver logado
+  const user = window.authManager ? window.authManager.getUser() : null;
+  if (user && user.accessToken && window.supabaseDb && typeof window.supabaseDb.syncUser2FA === "function") {
+    window.supabaseDb.syncUser2FA(user.accessToken);
+  }
 }
 
 if (document.readyState === "loading") {
