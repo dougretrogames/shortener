@@ -28,7 +28,7 @@ function isAdminUser(user) {
   return provider === "github" && username === targetAdmin;
 }
 
-function initDashboard() {
+async function initDashboard() {
   const hash = window.location.hash || "";
   const search = window.location.search || "";
   const isHandlingOAuth = hash.includes("access_token=") || search.includes("code=") || hash.includes("code=");
